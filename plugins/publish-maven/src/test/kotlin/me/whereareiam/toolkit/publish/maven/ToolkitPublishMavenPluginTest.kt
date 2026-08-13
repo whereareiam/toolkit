@@ -112,6 +112,56 @@ class ToolkitPublishMavenPluginTest {
     }
 
     @Test
+    fun `publishes a java platform component`() {
+        writeBuild(
+            """
+            import org.gradle.api.publish.PublishingExtension
+            import org.gradle.api.publish.maven.MavenPublication
+
+            plugins {
+                id 'java-platform'
+                id 'me.whereareiam.toolkit.publish.maven'
+            }
+
+            javaPlatform {
+                allowDependencies()
+            }
+
+            dependencies {
+                constraints {
+                    api 'example:api:1.0.0'
+                }
+            }
+
+            toolkitPublish {
+                component.set('javaPlatform')
+                artifactId.set('bom')
+                pom {
+                    description.set('Example BOM')
+                    name.set('Example BOM')
+                }
+            }
+
+            tasks.register('verifyPublishing') {
+                doLast {
+                    def publishing = project.extensions.getByType(PublishingExtension)
+                    def publication = publishing.publications.getByName('mavenJava') as MavenPublication
+                    println("platformComponent=${'$'}{components.findByName('javaPlatform') != null}")
+                    println("artifactId=${'$'}{publication.artifactId}")
+                    println("pomName=${'$'}{publication.pom.name.get()}")
+                }
+            }
+            """.trimIndent()
+        )
+
+        val result = runner(mapOf("VERSION" to "1.2.3")).withArguments("verifyPublishing").build()
+
+        assertTrue(result.output.contains("platformComponent=true"))
+        assertTrue(result.output.contains("artifactId=bom"))
+        assertTrue(result.output.contains("pomName=Example BOM"))
+    }
+
+    @Test
     fun `publish plugin override takes precedence over versioning override`() {
         writeJavaSource()
         writeBuild(

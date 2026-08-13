@@ -22,13 +22,21 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
 
         val extension = project.extensions.create("toolkitPublish", ToolkitPublishExtension::class.java)
         extension.name.convention("mavenJava")
+        extension.component.convention("java")
+        extension.includeComponent.convention(true)
         extension.sourcesJar.convention(true)
         extension.javadoc.jar.convention(true)
         extension.javadoc.doclint.convention(false)
+        extension.pom.name.convention(project.name)
+        extension.pom.description.convention(project.provider {
+            project.description ?: project.name
+        })
 
         project.afterEvaluate {
-            configureJavaArtifacts(project, extension)
-            configureJavadocs(project, extension)
+            if (extension.includeComponent.get() && extension.component.get() == "java") {
+                configureJavaArtifacts(project, extension)
+                configureJavadocs(project, extension)
+            }
             configurePublishing(project, extension)
         }
     }
@@ -75,10 +83,12 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
                             override fun execute(credentials: PasswordCredentials) {
                                 credentials.username = firstNonBlank(
                                     System.getenv("PUBLISH_USER"),
+                                    System.getenv("MAVEN_USERNAME"),
                                     project.findProperty("publishUser")?.toString()
                                 ).orEmpty()
                                 credentials.password = firstNonBlank(
                                     System.getenv("PUBLISH_TOKEN"),
+                                    System.getenv("MAVEN_PASSWORD"),
                                     project.findProperty("publishToken")?.toString()
                                 ).orEmpty()
                             }
@@ -92,10 +102,15 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
         val publication = publishing.publications.findByName(publicationName) as? MavenPublication
             ?: publishing.publications.create(publicationName, MavenPublication::class.java)
 
-        val javaComponent = project.components.findByName("java")
-            ?: throw GradleException("The toolkit publish plugin requires a java component on ${project.path}.")
+        if (extension.includeComponent.get()) {
+            val componentName = extension.component.get()
+            val component = project.components.findByName(componentName)
+                ?: throw GradleException(
+                    "The toolkit publish plugin requires a $componentName component on ${project.path}."
+                )
 
-        publication.from(javaComponent)
+            publication.from(component)
+        }
 
         extension.artifactId.orNull
             ?.takeIf(String::isNotBlank)
@@ -105,6 +120,8 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
             name.set(extension.pom.name)
             description.set(extension.pom.description)
         }
+
+        extension.configurePublication(publication)
     }
 
     private fun resolveChannel(project: Project, extension: ToolkitPublishExtension): String {
