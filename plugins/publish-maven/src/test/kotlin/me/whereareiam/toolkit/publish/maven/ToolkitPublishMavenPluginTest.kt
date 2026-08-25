@@ -64,7 +64,7 @@ class ToolkitPublishMavenPluginTest {
 
         val result = runner(mapOf("VERSION" to "v1.2.3-RC1")).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/maven-public"))
+        assertTrue(result.output.contains("repo=https://registry.whereareiam.me/maven/maven-public"))
         assertTrue(result.output.contains("publication=releasePublication"))
         assertTrue(result.output.contains("artifactId=demo-artifact"))
         assertTrue(result.output.contains("pomName=Demo publication"))
@@ -108,7 +108,7 @@ class ToolkitPublishMavenPluginTest {
 
         val result = runner(mapOf("VERSION" to "dev-abcdef1")).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/maven-public"))
+        assertTrue(result.output.contains("repo=https://registry.whereareiam.me/maven/maven-public"))
     }
 
     @Test
@@ -199,7 +199,7 @@ class ToolkitPublishMavenPluginTest {
             )
         ).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/maven-public"))
+        assertTrue(result.output.contains("repo=https://registry.whereareiam.me/maven/maven-public"))
     }
 
     @Test
@@ -233,7 +233,7 @@ class ToolkitPublishMavenPluginTest {
             )
         ).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/maven-private"))
+        assertTrue(result.output.contains("repo=https://registry.whereareiam.me/maven/maven-private"))
     }
 
     @Test

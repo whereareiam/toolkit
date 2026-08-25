@@ -46,7 +46,7 @@ subprojects {
                     }
                     val baseUrl = providers.environmentVariable("PUBLISH_MAVEN_BASE_URL")
                         .orElse(providers.environmentVariable("MAVEN_REPOSITORY_BASE_URL"))
-                        .orElse("https://maven.whereareiam.me/maven")
+                        .orElse("https://registry.whereareiam.me/maven")
                         .get()
                         .trimEnd('/')
                     url = uri("$baseUrl/$repositoryKey")

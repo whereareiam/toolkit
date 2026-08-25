@@ -5,15 +5,16 @@ Reusable Gradle plugins for publishing Maven artifacts and Docker/OCI images.
 ## Maven publishing
 
 Apply `me.whereareiam.toolkit.publish.maven` to a Maven-publishing project. The
-default base URL is `https://maven.whereareiam.me/maven`.
+default base URL is `https://registry.whereareiam.me/maven`.
 
-Publishing is selected with environment variables. The Maven hostname remains
-`maven.whereareiam.me` for compatibility with existing consumers:
+Publishing is selected with environment variables. The canonical Maven host is
+`registry.whereareiam.me`; `maven.whereareiam.me` is a deprecated
+consumer-compatibility host:
 
 ```text
 PUBLISH_VISIBILITY=private|public
 PUBLISH_CHANNEL=development|release
-PUBLISH_MAVEN_BASE_URL=https://maven.whereareiam.me/maven
+PUBLISH_MAVEN_BASE_URL=https://registry.whereareiam.me/maven
 PUBLISH_MAVEN_REPOSITORY=<optional exact repository key>
 PUBLISH_USER=<Artifact Keeper account or service account>
 PUBLISH_TOKEN=<Artifact Keeper token>

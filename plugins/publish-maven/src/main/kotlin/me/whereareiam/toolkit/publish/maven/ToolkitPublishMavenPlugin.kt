@@ -26,7 +26,7 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
         extension.repositoryBaseUrl.convention(
             project.providers.environmentVariable("PUBLISH_MAVEN_BASE_URL")
                 .orElse(project.providers.environmentVariable("MAVEN_REPOSITORY_BASE_URL"))
-                .orElse("https://maven.whereareiam.me/maven")
+                .orElse("https://registry.whereareiam.me/maven")
         )
         extension.repositoryVisibility.convention(
             project.providers.environmentVariable("PUBLISH_VISIBILITY")
