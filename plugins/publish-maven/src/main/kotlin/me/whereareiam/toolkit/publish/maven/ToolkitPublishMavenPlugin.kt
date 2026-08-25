@@ -25,6 +25,24 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
         extension.component.convention("java")
         extension.includeComponent.convention(true)
         extension.sourcesJar.convention(true)
+        extension.channelOverride.convention(
+            project.providers.environmentVariable("PUBLISH_CHANNEL")
+                .orElse(project.providers.environmentVariable("PUBLISH_REALM"))
+        )
+        extension.repositoryBaseUrl.convention(
+            project.providers.environmentVariable("PUBLISH_MAVEN_BASE_URL")
+                .orElse(project.providers.environmentVariable("MAVEN_REPOSITORY_BASE_URL"))
+                .orElse("https://maven.whereareiam.me/maven")
+        )
+        extension.repositoryVisibility.convention(
+            project.providers.environmentVariable("PUBLISH_VISIBILITY")
+                .orElse(project.providers.environmentVariable("MAVEN_VISIBILITY"))
+                .orElse("public")
+        )
+        extension.repositoryKeyOverride.convention(
+            project.providers.environmentVariable("PUBLISH_MAVEN_REPOSITORY")
+                .orElse(project.providers.environmentVariable("MAVEN_REPOSITORY"))
+        )
         extension.javadoc.jar.convention(true)
         extension.javadoc.doclint.convention(false)
         extension.pom.name.convention(project.name)
@@ -77,7 +95,9 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
             object : Action<MavenArtifactRepository> {
                 override fun execute(repository: MavenArtifactRepository) {
                     repository.name = "whereAreIAm"
-                    repository.url = project.uri("https://maven.whereareiam.me/$channel")
+                    repository.url = project.uri(
+                        "${extension.repositoryBaseUrl.get().trimEnd('/')}/${resolveRepositoryKey(project, extension, channel)}"
+                    )
                     repository.credentials(
                         object : Action<PasswordCredentials> {
                             override fun execute(credentials: PasswordCredentials) {
@@ -141,6 +161,25 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
             project.version.toString(),
             ToolkitVersioningSupport.DEFAULT_RELEASE_PATTERN
         )
+    }
+
+    private fun resolveRepositoryKey(
+        project: Project,
+        extension: ToolkitPublishExtension,
+        channel: String
+    ): String {
+        extension.repositoryKeyOverride.orNull
+            ?.trim()
+            ?.takeIf(String::isNotBlank)
+            ?.let { return it }
+
+        return when (extension.repositoryVisibility.get().trim().lowercase()) {
+            "public" -> channel
+            "private" -> "private-$channel"
+            else -> throw GradleException(
+                "Toolkit Maven publishing on ${project.path} requires repositoryVisibility to be public or private."
+            )
+        }
     }
 
     private fun firstNonBlank(vararg values: String?): String? =

@@ -64,7 +64,7 @@ class ToolkitPublishMavenPluginTest {
 
         val result = runner(mapOf("VERSION" to "v1.2.3-RC1")).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/release"))
+        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/release"))
         assertTrue(result.output.contains("publication=releasePublication"))
         assertTrue(result.output.contains("artifactId=demo-artifact"))
         assertTrue(result.output.contains("pomName=Demo publication"))
@@ -108,7 +108,7 @@ class ToolkitPublishMavenPluginTest {
 
         val result = runner(mapOf("VERSION" to "dev-abcdef1")).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/development"))
+        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/development"))
     }
 
     @Test
@@ -199,7 +199,71 @@ class ToolkitPublishMavenPluginTest {
 
         val result = runner(mapOf("VERSION" to "dev-abcdef1")).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/release"))
+        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/release"))
+    }
+
+    @Test
+    fun `maps private visibility to channel-specific private repository`() {
+        writeJavaSource()
+        writeBuild(
+            """
+            plugins {
+                id 'java-library'
+                id 'me.whereareiam.toolkit.publish.maven'
+            }
+
+            toolkitPublish {
+                repositoryVisibility.set('private')
+            }
+
+            tasks.register('verifyPublishing') {
+                doLast {
+                    def publishing = project.extensions.getByType(org.gradle.api.publish.PublishingExtension)
+                    def repository = publishing.repositories.getByName('whereAreIAm')
+                    println("repo=${'$'}{repository.url}")
+                }
+            }
+            """.trimIndent()
+        )
+
+        val result = runner(
+            mapOf(
+                "VERSION" to "dev-abcdef1",
+                "PUBLISH_CHANNEL" to "release"
+            )
+        ).withArguments("verifyPublishing").build()
+
+        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/private-release"))
+    }
+
+    @Test
+    fun `supports custom Maven base URL and repository key`() {
+        writeJavaSource()
+        writeBuild(
+            """
+            plugins {
+                id 'java-library'
+                id 'me.whereareiam.toolkit.publish.maven'
+            }
+
+            toolkitPublish {
+                repositoryBaseUrl.set('https://registry.example.test/maven')
+                repositoryKeyOverride.set('team-private')
+            }
+
+            tasks.register('verifyPublishing') {
+                doLast {
+                    def publishing = project.extensions.getByType(org.gradle.api.publish.PublishingExtension)
+                    def repository = publishing.repositories.getByName('whereAreIAm')
+                    println("repo=${'$'}{repository.url}")
+                }
+            }
+            """.trimIndent()
+        )
+
+        val result = runner(mapOf("VERSION" to "1.2.3")).withArguments("verifyPublishing").build()
+
+        assertTrue(result.output.contains("repo=https://registry.example.test/maven/team-private"))
     }
 
     @Test

@@ -44,7 +44,26 @@ subprojects {
                         .lowercase()
 
                     name = "whereAreIAm"
-                    url = uri("https://maven.whereareiam.me/$channel")
+                    val visibility = providers.environmentVariable("PUBLISH_VISIBILITY")
+                        .orElse("public")
+                        .get()
+                        .trim()
+                        .lowercase()
+                    val repositoryOverride = providers.environmentVariable("PUBLISH_MAVEN_REPOSITORY")
+                        .orNull
+                        ?.trim()
+                        ?.takeIf(String::isNotBlank)
+                    val repositoryKey = repositoryOverride ?: when (visibility) {
+                        "public" -> channel
+                        "private" -> "private-$channel"
+                        else -> error("PUBLISH_VISIBILITY must be public or private")
+                    }
+                    val baseUrl = providers.environmentVariable("PUBLISH_MAVEN_BASE_URL")
+                        .orElse(providers.environmentVariable("MAVEN_REPOSITORY_BASE_URL"))
+                        .orElse("https://maven.whereareiam.me/maven")
+                        .get()
+                        .trimEnd('/')
+                    url = uri("$baseUrl/$repositoryKey")
 
                     credentials {
                         username = providers.environmentVariable("PUBLISH_USER")

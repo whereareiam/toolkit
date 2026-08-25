@@ -42,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -55,9 +56,9 @@ jobs:
           check-latest: true
 
       - name: Build and publish
+        uses: whereareiam/devops/actions/registry/maven-publish@v1
+        with:
+          visibility: public
+          command: ./gradlew --no-daemon test publish
         env:
-          PUBLISH_USER: ${{ secrets.PUBLISH_USER }}
-          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
           VERSION: ${{ needs.prepare.outputs.version }}
-        run: ./gradlew --no-daemon test publish
-
