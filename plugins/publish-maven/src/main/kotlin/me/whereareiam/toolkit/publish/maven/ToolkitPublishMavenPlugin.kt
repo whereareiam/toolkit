@@ -1,8 +1,6 @@
 package me.whereareiam.toolkit.publish.maven
 
 import me.whereareiam.toolkit.publish.maven.extension.ToolkitPublishExtension
-import me.whereareiam.toolkit.versioning.extension.ToolkitVersioningExtension
-import me.whereareiam.toolkit.versioning.ToolkitVersioningSupport
 import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -25,10 +23,6 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
         extension.component.convention("java")
         extension.includeComponent.convention(true)
         extension.sourcesJar.convention(true)
-        extension.channelOverride.convention(
-            project.providers.environmentVariable("PUBLISH_CHANNEL")
-                .orElse(project.providers.environmentVariable("PUBLISH_REALM"))
-        )
         extension.repositoryBaseUrl.convention(
             project.providers.environmentVariable("PUBLISH_MAVEN_BASE_URL")
                 .orElse(project.providers.environmentVariable("MAVEN_REPOSITORY_BASE_URL"))
@@ -89,14 +83,12 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
 
     private fun configurePublishing(project: Project, extension: ToolkitPublishExtension) {
         val publishing = project.extensions.getByType(PublishingExtension::class.java)
-        val channel = resolveChannel(project, extension)
-
         publishing.repositories.maven(
             object : Action<MavenArtifactRepository> {
                 override fun execute(repository: MavenArtifactRepository) {
                     repository.name = "whereAreIAm"
                     repository.url = project.uri(
-                        "${extension.repositoryBaseUrl.get().trimEnd('/')}/${resolveRepositoryKey(project, extension, channel)}"
+                        "${extension.repositoryBaseUrl.get().trimEnd('/')}/${resolveRepositoryKey(project, extension)}"
                     )
                     repository.credentials(
                         object : Action<PasswordCredentials> {
@@ -144,29 +136,9 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
         extension.configurePublication(publication)
     }
 
-    private fun resolveChannel(project: Project, extension: ToolkitPublishExtension): String {
-        extension.channelOverride.orNull
-            ?.trim()
-            ?.takeIf(String::isNotBlank)
-            ?.lowercase()
-            ?.let { return it }
-
-        val versioning = project.rootProject.extensions.findByType(ToolkitVersioningExtension::class.java)
-            ?: project.extensions.findByType(ToolkitVersioningExtension::class.java)
-
-        if (versioning != null)
-            return versioning.resolvedChannel().get()
-
-        return ToolkitVersioningSupport.classifyChannel(
-            project.version.toString(),
-            ToolkitVersioningSupport.DEFAULT_RELEASE_PATTERN
-        )
-    }
-
     private fun resolveRepositoryKey(
         project: Project,
-        extension: ToolkitPublishExtension,
-        channel: String
+        extension: ToolkitPublishExtension
     ): String {
         extension.repositoryKeyOverride.orNull
             ?.trim()
@@ -174,8 +146,8 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
             ?.let { return it }
 
         return when (extension.repositoryVisibility.get().trim().lowercase()) {
-            "public" -> channel
-            "private" -> "private-$channel"
+            "public" -> "maven-public"
+            "private" -> "maven-private"
             else -> throw GradleException(
                 "Toolkit Maven publishing on ${project.path} requires repositoryVisibility to be public or private."
             )

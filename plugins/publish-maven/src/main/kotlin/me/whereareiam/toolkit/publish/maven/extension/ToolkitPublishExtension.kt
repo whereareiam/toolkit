@@ -18,15 +18,13 @@ abstract class ToolkitPublishExtension @Inject constructor(
     /** Whether the selected component contributes its default artifacts and dependencies. */
     abstract val includeComponent: Property<Boolean>
 
-    abstract val channelOverride: Property<String>
-
     /** Base URL containing the Maven repository namespaces. */
     abstract val repositoryBaseUrl: Property<String>
 
     /** Visibility of the selected Maven repository: `public` or `private`. */
     abstract val repositoryVisibility: Property<String>
 
-    /** Optional exact repository key, bypassing channel/visibility mapping. */
+    /** Optional exact repository key, bypassing visibility mapping. */
     abstract val repositoryKeyOverride: Property<String>
 
     val javadoc: ToolkitPublishJavadocExtension = objects.newInstance(ToolkitPublishJavadocExtension::class.java)

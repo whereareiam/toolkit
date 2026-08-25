@@ -13,7 +13,7 @@ class ToolkitPublishMavenPluginTest {
     lateinit var projectDir: Path
 
     @Test
-    fun `uses versioning derived release channel and configured publication metadata`() {
+    fun `uses the public repository and configured publication metadata`() {
         writeJavaSource()
         writeBuild(
             """
@@ -64,7 +64,7 @@ class ToolkitPublishMavenPluginTest {
 
         val result = runner(mapOf("VERSION" to "v1.2.3-RC1")).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/release"))
+        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/maven-public"))
         assertTrue(result.output.contains("publication=releasePublication"))
         assertTrue(result.output.contains("artifactId=demo-artifact"))
         assertTrue(result.output.contains("pomName=Demo publication"))
@@ -76,7 +76,7 @@ class ToolkitPublishMavenPluginTest {
     }
 
     @Test
-    fun `uses versioning derived development channel`() {
+    fun `uses the public repository for development versions`() {
         writeJavaSource()
         writeBuild(
             """
@@ -108,7 +108,7 @@ class ToolkitPublishMavenPluginTest {
 
         val result = runner(mapOf("VERSION" to "dev-abcdef1")).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/development"))
+        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/maven-public"))
     }
 
     @Test
@@ -162,7 +162,7 @@ class ToolkitPublishMavenPluginTest {
     }
 
     @Test
-    fun `publish plugin override takes precedence over versioning override`() {
+    fun `uses the public repository despite the versioning channel`() {
         writeJavaSource()
         writeBuild(
             """
@@ -175,12 +175,7 @@ class ToolkitPublishMavenPluginTest {
                 id 'me.whereareiam.toolkit.publish.maven'
             }
 
-            toolkitVersioning {
-                channelOverride.set('development')
-            }
-
             toolkitPublish {
-                channelOverride.set('release')
                 pom {
                     description.set('Demo description')
                     name.set('Demo publication')
@@ -197,13 +192,18 @@ class ToolkitPublishMavenPluginTest {
             """.trimIndent()
         )
 
-        val result = runner(mapOf("VERSION" to "dev-abcdef1")).withArguments("verifyPublishing").build()
+        val result = runner(
+            mapOf(
+                "VERSION" to "dev-abcdef1",
+                "PUBLISH_CHANNEL" to "release"
+            )
+        ).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/release"))
+        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/maven-public"))
     }
 
     @Test
-    fun `maps private visibility to channel-specific private repository`() {
+    fun `maps private visibility to the private repository`() {
         writeJavaSource()
         writeBuild(
             """
@@ -233,7 +233,7 @@ class ToolkitPublishMavenPluginTest {
             )
         ).withArguments("verifyPublishing").build()
 
-        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/private-release"))
+        assertTrue(result.output.contains("repo=https://maven.whereareiam.me/maven/maven-private"))
     }
 
     @Test

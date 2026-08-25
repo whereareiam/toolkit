@@ -19,10 +19,11 @@ PUBLISH_USER=<Artifact Keeper account or service account>
 PUBLISH_TOKEN=<Artifact Keeper token>
 ```
 
-The repository key is `private-development` or `private-release` for private
-publishing, and `development` or `release` for public publishing. An explicit
-`PUBLISH_MAVEN_REPOSITORY` takes precedence. CI workflows can populate
-`PUBLISH_USER` and `PUBLISH_TOKEN` from the DevOps Artifact Keeper OIDC action.
+The repository key is `maven-private` for private publishing and
+`maven-public` for public publishing. `PUBLISH_CHANNEL` remains a version
+channel, not a repository selector. An explicit `PUBLISH_MAVEN_REPOSITORY`
+takes precedence. CI workflows can populate `PUBLISH_USER` and
+`PUBLISH_TOKEN` from the DevOps Artifact Keeper OIDC action.
 
 ## Docker publishing
 

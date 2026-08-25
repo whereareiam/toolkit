@@ -6,10 +6,6 @@ plugins {
     base
 }
 
-val releaseVersionPattern = Regex(
-    "^v?(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
-)
-
 allprojects {
     group = "me.whereareiam.toolkit"
     version = providers.environmentVariable("VERSION").orElse("dev").get()
@@ -33,16 +29,6 @@ subprojects {
         extensions.configure<PublishingExtension> {
             repositories {
                 maven {
-                    val channel = providers.environmentVariable("PUBLISH_CHANNEL")
-                        .orElse(providers.environmentVariable("PUBLISH_REALM"))
-                        .orElse(
-                            providers.provider {
-                                if (releaseVersionPattern.matches(project.version.toString())) "release" else "development"
-                            }
-                        )
-                        .get()
-                        .lowercase()
-
                     name = "whereAreIAm"
                     val visibility = providers.environmentVariable("PUBLISH_VISIBILITY")
                         .orElse("public")
@@ -54,8 +40,8 @@ subprojects {
                         ?.trim()
                         ?.takeIf(String::isNotBlank)
                     val repositoryKey = repositoryOverride ?: when (visibility) {
-                        "public" -> channel
-                        "private" -> "private-$channel"
+                        "public" -> "maven-public"
+                        "private" -> "maven-private"
                         else -> error("PUBLISH_VISIBILITY must be public or private")
                     }
                     val baseUrl = providers.environmentVariable("PUBLISH_MAVEN_BASE_URL")
