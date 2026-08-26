@@ -62,10 +62,9 @@ jobs:
           check-latest: true
 
       - name: Build and publish
-        uses: whereareiam/devops/actions/registry/maven-publish@v1
+        uses: whereareiam/devops/actions/registry/maven-publish@v2
         with:
           visibility: public
-          repository: packages
           command: ./gradlew --no-daemon test publish
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
