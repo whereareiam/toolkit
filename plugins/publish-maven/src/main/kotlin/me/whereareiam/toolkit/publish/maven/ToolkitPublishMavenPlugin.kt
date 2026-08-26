@@ -146,8 +146,8 @@ class ToolkitPublishMavenPlugin : Plugin<Project> {
             ?.let { return it }
 
         return when (extension.repositoryVisibility.get().trim().lowercase()) {
-            "public" -> "maven-public"
-            "private" -> "maven-private"
+            "public" -> "packages"
+            "private" -> "packages-private"
             else -> throw GradleException(
                 "Toolkit Maven publishing on ${project.path} requires repositoryVisibility to be public or private."
             )

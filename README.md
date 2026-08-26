@@ -20,8 +20,8 @@ PUBLISH_USER=<Artifact Keeper account or service account>
 PUBLISH_TOKEN=<Artifact Keeper token>
 ```
 
-The repository key is `maven-private` for private publishing and
-`maven-public` for public publishing. `PUBLISH_CHANNEL` remains a version
+The repository key is `packages-private` for private publishing and `packages`
+for public publishing. `PUBLISH_CHANNEL` remains a version
 channel, not a repository selector. An explicit `PUBLISH_MAVEN_REPOSITORY`
 takes precedence. CI workflows can populate `PUBLISH_USER` and
 `PUBLISH_TOKEN` from the DevOps Artifact Keeper OIDC action.
@@ -41,6 +41,6 @@ PUBLISH_TOKEN=<Artifact Keeper token>
 ```
 
 The default registry is `registry.whereareiam.me`. This resolves to
-`<registry>/docker-private/<namespace>/<image>` or the corresponding
-`docker-public` path. The plugin also supports `repositoryOverride` for a
+`<registry>/images-private/<namespace>/<image>` or the corresponding `images`
+path. The plugin also supports `repositoryOverride` for a
 non-standard registry layout.

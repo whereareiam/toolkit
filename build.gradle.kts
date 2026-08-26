@@ -40,8 +40,8 @@ subprojects {
                         ?.trim()
                         ?.takeIf(String::isNotBlank)
                     val repositoryKey = repositoryOverride ?: when (visibility) {
-                        "public" -> "maven-public"
-                        "private" -> "maven-private"
+                        "public" -> "packages"
+                        "private" -> "packages-private"
                         else -> error("PUBLISH_VISIBILITY must be public or private")
                     }
                     val baseUrl = providers.environmentVariable("PUBLISH_MAVEN_BASE_URL")

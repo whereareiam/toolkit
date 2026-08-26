@@ -80,8 +80,9 @@ class ToolkitPublishDockerPlugin : Plugin<Project> {
         if (visibility != "private" && visibility != "public")
             throw GradleException("Toolkit Docker publishing requires visibility=private or visibility=public.")
 
-        return "${extension.registry.get().trimEnd('/')}/docker-$visibility/" +
-            "${extension.namespace.get().trim('/')}/${extension.image.get().trim('/')}"
+        val repository = if (visibility == "public") "images" else "images-private"
+        return "${extension.registry.get().trimEnd('/')}/$repository/" +
+                "${extension.namespace.get().trim('/')}/${extension.image.get().trim('/')}"
     }
 }
 
