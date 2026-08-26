@@ -162,7 +162,7 @@ class ToolkitPublishMavenPluginTest {
     }
 
     @Test
-    fun `uses the public repository despite the versioning channel`() {
+    fun `uses the public repository for a development version`() {
         writeJavaSource()
         writeBuild(
             """
@@ -192,12 +192,9 @@ class ToolkitPublishMavenPluginTest {
             """.trimIndent()
         )
 
-        val result = runner(
-            mapOf(
-                "VERSION" to "dev-abcdef1",
-                "PUBLISH_CHANNEL" to "release"
-            )
-        ).withArguments("verifyPublishing").build()
+        val result = runner(mapOf("VERSION" to "dev-abcdef1"))
+            .withArguments("verifyPublishing")
+            .build()
 
         assertTrue(result.output.contains("repo=https://registry.whereareiam.me/maven/packages"))
     }
@@ -226,12 +223,9 @@ class ToolkitPublishMavenPluginTest {
             """.trimIndent()
         )
 
-        val result = runner(
-            mapOf(
-                "VERSION" to "dev-abcdef1",
-                "PUBLISH_CHANNEL" to "release"
-            )
-        ).withArguments("verifyPublishing").build()
+        val result = runner(mapOf("VERSION" to "dev-abcdef1"))
+            .withArguments("verifyPublishing")
+            .build()
 
         assertTrue(result.output.contains("repo=https://registry.whereareiam.me/maven/packages-private"))
     }

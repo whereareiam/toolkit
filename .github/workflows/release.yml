@@ -65,7 +65,7 @@ jobs:
         uses: whereareiam/devops/actions/registry/maven-publish@v1
         with:
           visibility: public
-          channel: release
+          repository: packages
           command: ./gradlew --no-daemon test publish
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
