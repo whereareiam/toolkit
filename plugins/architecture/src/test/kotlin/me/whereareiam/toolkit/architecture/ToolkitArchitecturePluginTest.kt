@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -346,6 +348,151 @@ class ToolkitArchitecturePluginTest {
 		append(":consumer", "dependencies { runtimeOnly project(':foreign:foreign-api') }")
 
 		assertDiagnostic(reject(), "family", ":consumer", ":foreign:foreign-api")
+	}
+
+	@Test
+	fun `shared contracts permit separate client and server families and invalidate cached permissions`() {
+		agentFamilies()
+
+		assertVerified(verify())
+		val reused = verify()
+		assertVerified(reused)
+		assertDiagnostic(reused, "Reusing configuration cache")
+		append(":agent:client", "architecture { sharedApis = [] as Set }")
+
+		assertDiagnostic(reject(), ":agent:client:client-api", ":agent:agent-api", "family")
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = ["client", "server"])
+	fun `sharing contracts does not allow opposite role APIs or implementations`(role: String) {
+		agentFamilies()
+		val other = if (role == "client") "server" else "client"
+		append(":agent:$role", """
+			dependencies {
+				implementation project(':agent:$other:$other-api')
+				implementation project(':agent:$other')
+			}
+		""".trimIndent())
+		append(":agent:$role:$role-api", "dependencies { api project(':agent:$other:$other-api') }")
+
+		assertDiagnostic(reject(), ":agent:$role:implementation -> :agent:$other:$other-api", "family",
+			":agent:$role:implementation -> :agent:$other may depend only on APIs",
+			":agent:$role:$role-api:api -> :agent:$other:$other-api")
+	}
+
+	@Test
+	fun `sharing is inherited by own adapters but not nested API owners or unrelated families`() {
+		agentFamilies(
+			":agent:client:adapter" to "dependencies { implementation project(':agent:agent-api') }",
+			":agent:client:extension:extension-api" to "",
+			":agent:client:extension" to "dependencies { implementation project(':agent:agent-api') }",
+			":other:other-api" to "",
+			":other" to "dependencies { implementation project(':agent:agent-api') }"
+		)
+
+		val result = reject()
+		assertDiagnostic(result, ":agent:client:extension:implementation -> :agent:agent-api", ":other:implementation -> :agent:agent-api")
+		assertTrue(!result.output.contains(":agent:client:adapter:implementation -> :agent:agent-api"), result.output)
+	}
+
+	@Test
+	fun `a shared contract cannot reexport a role API`() {
+		agentFamilies()
+		append(":agent:agent-api", "dependencies { api project(':agent:server:server-api') }")
+
+		assertDiagnostic(reject(), ":agent:agent-api:api -> :agent:server:server-api", "family",
+			":agent:client:client-api:api -> :agent:agent-api exposes unapproved API :agent:server:server-api")
+	}
+
+	@Test
+	fun `approved sharing is not transitively granted through another API`() {
+		project(
+			":domain:domain-api" to "",
+			":domain:middle:middle-api" to """
+				architecture { sharedApis = [':domain:domain-api'] as Set }
+				dependencies { api project(':domain:domain-api') }
+			""".trimIndent(),
+			":domain:middle:consumer" to """
+				architecture { sharedApis = [':domain:middle:middle-api'] as Set }
+				dependencies { implementation project(':domain:middle:consumer:consumer-api') }
+			""".trimIndent(),
+			":domain:middle:consumer:consumer-api" to "dependencies { api project(':domain:middle:middle-api') }"
+		)
+
+		assertDiagnostic(reject(), ":domain:middle:consumer:implementation -> :domain:middle:consumer:consumer-api exposes unapproved API :domain:domain-api",
+			":domain:middle:consumer:consumer-api:api -> :domain:middle:middle-api exposes unapproved API :domain:domain-api", "not transitive")
+		append(":domain:middle:consumer", "architecture { sharedApis = [':domain:middle:middle-api', ':domain:domain-api'] as Set }")
+
+		assertVerified(verify())
+	}
+
+	@Test
+	fun `shared declarations cannot allow sibling role or unrelated APIs`() {
+		agentFamilies(
+			":unrelated:unrelated-api" to "",
+			":independent-api" to ""
+		)
+		append(":agent:client", """
+			architecture { sharedApis = [':agent:agent-api', ':agent:server:server-api', ':unrelated:unrelated-api', ':independent-api'] as Set }
+		""".trimIndent())
+
+		assertDiagnostic(reject(), "sharedApis target :agent:server:server-api must belong to a strict ancestor",
+			"sharedApis target :unrelated:unrelated-api must belong to a strict ancestor",
+			"sharedApis target :independent-api must belong to a strict ancestor")
+	}
+
+	@Test
+	fun `shared contract declarations require a real foreign API and an API owner`() {
+		agentFamilies(
+			":invalid" to "architecture { sharedApis = [':agent:agent-api'] as Set }"
+		)
+		append(":agent:client", """
+			architecture {
+				sharedApis = [':missing', 'agent:agent-api', ':agent:server', ':anvil-api', ':agent:client:client-api'] as Set
+			}
+		""".trimIndent())
+		append(":agent:client:client-api", "architecture { sharedApis = [':agent:client:client-api'] as Set }")
+		append(":anvil-api", "architecture { sharedApis = [':agent:agent-api'] as Set }")
+
+		assertDiagnostic(reject(), "unknown API project ':missing'", "unknown API project 'agent:agent-api'",
+			"target :agent:server must have API kind", "must not include the shared root API :anvil-api",
+			"must not include its own API family: :agent:client:client-api",
+			":invalid: sharedApis must be declared on an API or its owning project",
+			":anvil-api: shared root API must not declare sharedApis")
+	}
+
+	@Test
+	fun `directed shared contract declarations must not form cycles`() {
+		project(
+			":first" to "architecture { sharedApis = [':second:second-api'] as Set }",
+			":first:first-api" to "",
+			":second" to "architecture { sharedApis = [':first:first-api'] as Set }",
+			":second:second-api" to ""
+		)
+
+		assertDiagnostic(reject(), "sharedApis must not form a cycle", ":first:first-api", ":second:second-api")
+	}
+
+	private fun agentFamilies(vararg additionalModules: Pair<String, String>) {
+		project(
+			":anvil-api" to "",
+			":agent:agent-api" to "dependencies { api project(':anvil-api') }",
+			":agent:client" to """
+				architecture { sharedApis = [':agent:agent-api'] as Set }
+				dependencies {
+					implementation project(':agent:client:client-api')
+					implementation project(':agent:agent-api')
+				}
+			""".trimIndent(),
+			":agent:client:client-api" to "dependencies { api project(':agent:agent-api') }",
+			":agent:server" to """
+				architecture { sharedApis = [':agent:agent-api'] as Set }
+				dependencies { implementation project(':agent:server:server-api') }
+			""".trimIndent(),
+			":agent:server:server-api" to "dependencies { api project(':agent:agent-api') }",
+			*additionalModules
+		)
 	}
 
 	private fun project(

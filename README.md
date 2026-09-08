@@ -9,8 +9,8 @@ Apply `me.whereareiam.toolkit.architecture` to the root project and run
 All projects are checked; applying the plugin to a child project enables its
 `architecture` configuration block.
 
-Implementations may depend on APIs from their own family and the build's shared
-root API. Family APIs follow the same ownership rule and expose project dependencies
+Implementations may depend on APIs from their own family, explicitly approved
+ancestor contracts, and the build's shared root API. Family APIs follow the same ownership rule and expose project dependencies
 through `api` (or a configuration inherited by `api`). The shared root API cannot
 have project dependencies. Assemblies may compose other modules.
 
@@ -44,6 +44,47 @@ implementations. Gradle-plugin projects and source-free dependency bundles are i
 Custom or generated main source roots count as implementations even before generated
 files exist; a `:default` name alone does not grant an exemption. Other packaging
 modules can explicitly use `kind = assembly`.
+
+### Shared contracts for nested API owners
+
+Client and server APIs can share a contract API owned by an ancestor without
+becoming one family:
+
+```text
+agent/
+├── agent-api/
+├── client/
+│   └── client-api/
+└── server/
+    └── server-api/
+```
+
+Apply the architecture plugin and declare the shared API in both `agent/client/build.gradle.kts`
+and `agent/server/build.gradle.kts`:
+
+```kotlin
+architecture {
+    sharedApis = setOf(":agent:agent-api")
+}
+```
+
+Each owner and its API children and implementations may then depend on
+`:agent:agent-api`. Declare API dependencies through `api` as usual. The client
+still cannot depend on `:agent:server:server-api` or the server implementation,
+and the shared contract cannot depend back on either role API.
+
+The declaration accepts only specific APIs owned by a strict ancestor of the
+declaring API owner. Sibling APIs, unrelated APIs, implementations, the shared
+root API, and APIs already in the owner's family are rejected. It can be placed
+on an API for that API alone, or on its owning project for its family. A nested
+project with its own API starts a separate family and does not inherit the
+ancestor's permissions. No permission is granted just by sharing a directory.
+
+Sharing is directed and is not transitive. If an approved contract re-exports
+another ancestor API, each consumer must explicitly approve that API too.
+Verification checks the exported dependency paths, including when an
+implementation consumes only its own API, so re-exports cannot hide a foreign
+contract behind an allowed dependency.
 
 Verification checks declared project dependencies in `api`, `implementation`,
 `compileOnly`, `compileOnlyApi`, `runtimeOnly`, `embedded`, and their inherited
