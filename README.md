@@ -1,6 +1,56 @@
 # Toolkit
 
-Reusable Gradle plugins for publishing Maven artifacts and Docker/OCI images.
+Reusable Gradle plugins for modular builds, architecture verification, versioning, and publishing.
+
+## Architecture verification
+
+Apply `me.whereareiam.toolkit.architecture` to the root project and run
+`./gradlew verifyArchitecture`. The root `check` task also runs verification.
+All projects are checked; applying the plugin to a child project enables its
+`architecture` configuration block.
+
+Implementations may depend on APIs from their own family and the build's shared
+root API. Family APIs follow the same ownership rule and expose project dependencies
+through `api` (or a configuration inherited by `api`). The shared root API cannot
+have project dependencies. Assemblies may compose other modules.
+
+Families follow API ownership rather than the top-level directory:
+
+- An API named `api` or ending in `-api` belongs to its immediate non-root parent.
+- An implementation belongs to the nearest non-root ancestor, including itself,
+  that directly contains an API module. Grouping directories with only deeper APIs
+  do not combine those families.
+- A module with no inferred owner is its own family. Flat layouts can explicitly
+  give their API and implementation the same family identifier.
+- A direct root child named `api` or `<root-name>-api` is the shared root API;
+  matching the root name is case-insensitive. At most one shared root API is allowed.
+
+For example, `:environment:java:java-api` and its owning `:environment:java`
+implementation are one family; `:environment:cache:cache-api` belongs to another.
+A dependency between them fails verification.
+
+Apply the plugin to a module to override its inferred ownership when needed:
+
+```kotlin
+architecture {
+    family = "billing"
+    // kind = api, implementation, or assembly
+    // rootApi = true for a custom shared API, or false to disable inferred sharing
+}
+```
+
+An owning module's family override applies to its unconfigured API children and
+implementations. Gradle-plugin projects and source-free dependency bundles are inferred as assemblies.
+Custom or generated main source roots count as implementations even before generated
+files exist; a `:default` name alone does not grant an exemption. Other packaging
+modules can explicitly use `kind = assembly`.
+
+Verification checks declared project dependencies in `api`, `implementation`,
+`compileOnly`, `compileOnlyApi`, `runtimeOnly`, `embedded`, and their inherited
+configurations. Main compile/runtime classpaths and outgoing API/runtime variants
+are included as well. Test and test-fixture configurations are excluded unless inherited
+into production. Forbidden API re-exports fail at the declaring API module. The task
+does not inspect Java signatures, bytecode, or externally resolved Maven artifacts.
 
 ## Maven publishing
 
