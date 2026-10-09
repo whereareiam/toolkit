@@ -1,6 +1,6 @@
 # Toolkit
 
-Reusable Gradle plugins for modular builds, architecture verification, versioning, and publishing.
+Reusable Gradle plugins for modular builds, architecture verification, versioning, distribution, and publishing.
 
 ## Architecture verification
 
@@ -92,6 +92,37 @@ configurations. Main compile/runtime classpaths and outgoing API/runtime variant
 are included as well. Test and test-fixture configurations are excluded unless inherited
 into production. Forbidden API re-exports fail at the declaring API module. The task
 does not inspect Java signatures, bytecode, or externally resolved Maven artifacts.
+
+## Distribution
+
+Apply `me.whereareiam.toolkit.distribution` to the project that ships release files, usually the
+root, and declare each file by the label in its final name:
+
+```kotlin
+toolkitDistribution {
+    file("API", ":example-api", "jar")
+    file("BUNDLE", ":example-platform:bundle", "shadowJar")
+    archive("PLATFORMS") {
+        file("VELOCITY", ":platform-velocity", "shadowJar")
+        file("BUNGEECORD", ":platform-bungeecord", "shadowJar")
+    }
+}
+```
+
+`./gradlew assembleDistribution` builds the sources and writes `build/distribution`:
+
+```text
+Example-API-1.2.3.jar
+Example-BUNDLE-1.2.3.jar
+Example-PLATFORMS-1.2.3.zip   (Example-VELOCITY-1.2.3.jar, Example-BUNGEECORD-1.2.3.jar)
+```
+
+Every name is `<name>-<label>-<version>.<extension>`; the extension comes from the source file.
+`name` defaults to the root project's name, `version` to the project's version, and `directory` to
+`build/distribution`. A source is the single output of a task of another project, as above, or
+anything a file collection accepts that resolves to one file, such as `tasks.named("jar")`. Archive
+members are not written beside their archive. The task empties the directory first, so it never
+holds files of an earlier version, and a CI workflow can upload it as it is.
 
 ## Maven publishing
 
