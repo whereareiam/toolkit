@@ -5,7 +5,9 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.process.ExecOperations
 import javax.inject.Inject
 import java.io.ByteArrayInputStream
@@ -86,13 +88,17 @@ class ToolkitPublishDockerPlugin : Plugin<Project> {
     }
 }
 
+@UntrackedTask(because = "Runs the Docker CLI, whose images and registry state Gradle cannot track")
 abstract class ToolkitDockerLoginTask : DefaultTask() {
 
     @get:Inject
     abstract val execOperations: ExecOperations
 
+    @get:Internal
     abstract val registry: org.gradle.api.provider.Property<String>
+    @get:Internal
     abstract val username: org.gradle.api.provider.Property<String>
+    @get:Internal
     abstract val token: org.gradle.api.provider.Property<String>
 
     @TaskAction
@@ -105,14 +111,19 @@ abstract class ToolkitDockerLoginTask : DefaultTask() {
     }
 }
 
+@UntrackedTask(because = "Runs the Docker CLI, whose images and registry state Gradle cannot track")
 abstract class ToolkitDockerBuildTask : DefaultTask() {
 
     @get:Inject
     abstract val execOperations: ExecOperations
 
+    @get:Internal
     abstract val repository: org.gradle.api.provider.Property<String>
+    @get:Internal
     abstract val tags: org.gradle.api.provider.ListProperty<String>
+    @get:Internal
     abstract val dockerfile: org.gradle.api.file.RegularFileProperty
+    @get:Internal
     abstract val context: org.gradle.api.file.DirectoryProperty
 
     @TaskAction
@@ -128,12 +139,15 @@ abstract class ToolkitDockerBuildTask : DefaultTask() {
     }
 }
 
+@UntrackedTask(because = "Runs the Docker CLI, whose images and registry state Gradle cannot track")
 abstract class ToolkitDockerPushTask : DefaultTask() {
 
     @get:Inject
     abstract val execOperations: ExecOperations
 
+    @get:Internal
     abstract val repository: org.gradle.api.provider.Property<String>
+    @get:Internal
     abstract val tags: org.gradle.api.provider.ListProperty<String>
 
     @TaskAction
