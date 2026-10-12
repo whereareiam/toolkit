@@ -48,7 +48,7 @@ internal object ArchitectureVerifier {
 				add("$reference may depend only on APIs, not ${targetDescriptor.kind}")
 			} else if (!allows(sourceDescriptor, dependency.path, targetDescriptor)) {
 				add("$reference crosses API family '${sourceDescriptor.family}' -> '${targetDescriptor.family}'; "
-						+ "only own-family APIs, explicitly shared APIs, and the shared root API are allowed")
+						+ "only own-family APIs, explicitly shared or depended-on APIs, and the shared root API are allowed")
 			} else {
 				addAll(exportViolations(reference, dependency.path, sourceDescriptor, model))
 			}
@@ -59,7 +59,8 @@ internal object ArchitectureVerifier {
 	}
 
 	private fun allows(source: ArchitectureDescriptor, targetPath: String, target: ArchitectureDescriptor): Boolean =
-		target.kind == ArchitectureKind.API && (target.rootApi || target.family == source.family || targetPath in source.sharedApis)
+		target.kind == ArchitectureKind.API && (target.rootApi || target.family == source.family || targetPath in source.sharedApis
+				|| targetPath in source.dependsOnApis)
 
 	private fun exportViolations(
 		reference: String,
@@ -74,7 +75,7 @@ internal object ArchitectureVerifier {
 				if (!visited.add(exported)) continue
 				val target = model.descriptors[exported] ?: continue
 				if (!allows(source, exported, target))
-					violations.add("$reference exposes unapproved API $exported through $path; sharedApis permissions are not transitive")
+					violations.add("$reference exposes unapproved API $exported through $path; sharedApis and dependsOnApis permissions are not transitive")
 				visit(exported)
 			}
 		}

@@ -86,6 +86,35 @@ Verification checks the exported dependency paths, including when an
 implementation consumes only its own API, so re-exports cannot hide a foreign
 contract behind an allowed dependency.
 
+### Families that build on another family
+
+A family may build on the API of a sibling or unrelated family, such as a feature
+that uses another feature's contract:
+
+```text
+capability/
+├── commands/
+│   └── commands-api/
+└── dialogs/
+    └── dialogs-api/
+```
+
+Declare it in `capability/dialogs/build.gradle.kts`:
+
+```kotlin
+architecture {
+    dependsOnApis = setOf(":capability:commands:commands-api")
+}
+```
+
+Dialogs and its own API children and implementations may then depend on
+`:capability:commands:commands-api`. Commands still cannot depend on dialogs,
+and no other family gains anything. Like `sharedApis`, the declaration names
+specific APIs, belongs on an API or its owning project, is not inherited by
+nested API owners, and is not transitive: an API the depended-on API re-exports
+needs its own declaration. An ancestor's contract belongs in `sharedApis`
+instead, and two families must not depend on each other's APIs.
+
 Verification checks declared project dependencies in `api`, `implementation`,
 `compileOnly`, `compileOnlyApi`, `runtimeOnly`, `embedded`, and their inherited
 configurations. Main compile/runtime classpaths and outgoing API/runtime variants
