@@ -20,10 +20,6 @@ template: |
 
   **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$RESOLVED_TAG
 
-  # Installation
-
-  Gradle has to run on Java 21 or newer. Add `https://registry.whereareiam.me/maven/packages` to `pluginManagement` repositories and apply a plugin with version `$RESOLVED_VERSION`, for example `id("me.whereareiam.toolkit.distribution") version "$RESOLVED_VERSION"`. See the [README](https://github.com/whereareiam/toolkit#readme) for each plugin.
-
 categories:
   - type: pre-exclude
     when:
