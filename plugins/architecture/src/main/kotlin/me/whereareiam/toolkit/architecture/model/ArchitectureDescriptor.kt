@@ -7,4 +7,5 @@ internal data class ArchitectureDescriptor(
 	val rootApi: Boolean,
 	val family: String,
 	val sharedApis: Set<String>,
+	val dependsOnApis: Set<String>,
 )

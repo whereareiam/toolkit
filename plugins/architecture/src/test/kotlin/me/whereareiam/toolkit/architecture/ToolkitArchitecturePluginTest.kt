@@ -474,6 +474,84 @@ class ToolkitArchitecturePluginTest {
 		assertDiagnostic(reject(), "sharedApis must not form a cycle", ":first:first-api", ":second:second-api")
 	}
 
+	@Test
+	fun `a family may depend on a declared sibling API, inherited by its own modules only`() {
+		capabilityFamilies(
+			":capability:dialogs:dialogs-common" to "dependencies { compileOnly project(':capability:commands:commands-api') }",
+			":capability:dialogs:extension:extension-api" to "",
+			":capability:dialogs:extension" to "dependencies { implementation project(':capability:commands:commands-api') }",
+			":capability:messages:messages-api" to "",
+			":capability:messages" to "dependencies { implementation project(':capability:commands:commands-api') }"
+		)
+
+		val result = reject()
+		assertDiagnostic(result, ":capability:dialogs:extension:implementation -> :capability:commands:commands-api",
+			":capability:messages:implementation -> :capability:commands:commands-api", "depended-on")
+		assertTrue(!result.output.contains(":capability:dialogs:dialogs-common:compileOnly"), result.output)
+		assertTrue(!result.output.contains(":capability:dialogs:dialogs-api:api"), result.output)
+	}
+
+	@Test
+	fun `a depended-on API grants nothing it reexports and nothing in reverse`() {
+		capabilityFamilies(
+			":capability:session:session-api" to "",
+			":capability:commands" to "dependencies { implementation project(':capability:dialogs:dialogs-api') }"
+		)
+		append(":capability:commands:commands-api", "dependencies { api project(':capability:session:session-api') }")
+		append(":capability:commands", "architecture { dependsOnApis = [':capability:session:session-api'] as Set }")
+
+		assertDiagnostic(reject(), ":capability:dialogs:dialogs-api:api -> :capability:commands:commands-api exposes unapproved API :capability:session:session-api",
+			":capability:commands:implementation -> :capability:dialogs:dialogs-api", "family")
+	}
+
+	@Test
+	fun `depended-on API declarations require a foreign non ancestor API and an API owner`() {
+		capabilityFamilies(
+			":capability:capability-api" to "",
+			":invalid" to "architecture { dependsOnApis = [':capability:commands:commands-api'] as Set }"
+		)
+		append(":capability:dialogs", """
+			architecture {
+				dependsOnApis = [':capability:commands:commands-api', ':missing', ':capability:commands', ':anvil-api',
+					':capability:dialogs:dialogs-api', ':capability:capability-api'] as Set
+			}
+		""".trimIndent())
+		append(":anvil-api", "architecture { dependsOnApis = [':capability:commands:commands-api'] as Set }")
+
+		assertDiagnostic(reject(), "dependsOnApis targets unknown API project ':missing'",
+			"dependsOnApis target :capability:commands must have API kind",
+			"dependsOnApis must not include the shared root API :anvil-api",
+			"dependsOnApis must not include its own API family: :capability:dialogs:dialogs-api",
+			"dependsOnApis target :capability:capability-api belongs to an ancestor; declare it in sharedApis",
+			":invalid: dependsOnApis must be declared on an API or its owning project",
+			":anvil-api: shared root API must not declare dependsOnApis")
+	}
+
+	@Test
+	fun `families must not depend on each other's APIs`() {
+		capabilityFamilies()
+		append(":capability:commands", "architecture { dependsOnApis = [':capability:dialogs:dialogs-api'] as Set }")
+
+		assertDiagnostic(reject(), "dependsOnApis must not form a cycle", ":capability:commands", ":capability:dialogs")
+	}
+
+	/**
+	 * Two sibling families where dialogs declares that it builds on the commands API.
+	 */
+	private fun capabilityFamilies(vararg additionalModules: Pair<String, String>) {
+		project(
+			":anvil-api" to "",
+			":capability:commands:commands-api" to "dependencies { api project(':anvil-api') }",
+			":capability:commands" to "dependencies { implementation project(':capability:commands:commands-api') }",
+			":capability:dialogs" to """
+				architecture { dependsOnApis = [':capability:commands:commands-api'] as Set }
+				dependencies { implementation project(':capability:dialogs:dialogs-api') }
+			""".trimIndent(),
+			":capability:dialogs:dialogs-api" to "dependencies { api project(':capability:commands:commands-api') }",
+			*additionalModules
+		)
+	}
+
 	private fun agentFamilies(vararg additionalModules: Pair<String, String>) {
 		project(
 			":anvil-api" to "",

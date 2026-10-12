@@ -22,7 +22,7 @@ internal class ArchitectureModel(private val root: Project) {
 
 	val descriptors: Map<String, ArchitectureDescriptor> = projects.associate { project ->
 		project.path to ArchitectureDescriptor(
-			kinds.getValue(project), shared.getValue(project), family(project), sharedApis(project)
+			kinds.getValue(project), shared.getValue(project), family(project), sharedApis(project), dependsOnApis(project)
 		)
 	}
 	val apiExports: Map<String, List<String>> = projects
@@ -40,12 +40,14 @@ internal class ArchitectureModel(private val root: Project) {
 			if (shared.getValue(project) && kinds[project] != ArchitectureKind.API)
 				add("${project.path}: shared root API must have API kind")
 			addAll(sharedApiViolations(project))
+			addAll(dependsOnApiViolations(project))
 		}
 
 		val roots = projects.filter { shared.getValue(it) && kinds[it] == ArchitectureKind.API }
 		if (roots.size > 1)
 			add("Only one shared root API is allowed; found ${roots.joinToString { it.path }}")
 		addAll(sharedApiCycles())
+		addAll(familyDependencyCycles())
 	}
 
 	private fun sharedApis(project: Project): Set<String> {
@@ -54,6 +56,59 @@ internal class ArchitectureModel(private val root: Project) {
 		if (owner == project || family(project) != family(owner)) return own
 
 		return own + extensions[owner]?.sharedApis.orEmpty()
+	}
+
+	private fun dependsOnApis(project: Project): Set<String> {
+		val own = extensions[project]?.dependsOnApis.orEmpty()
+		val owner = owners.getValue(project)
+		if (owner == project || family(project) != family(owner)) return own
+
+		return own + extensions[owner]?.dependsOnApis.orEmpty()
+	}
+
+	private fun dependsOnApiViolations(project: Project): List<String> = buildList {
+		val declared = extensions[project]?.dependsOnApis.orEmpty()
+		if (declared.isEmpty()) return@buildList
+		val source = descriptors.getValue(project.path)
+		if (source.rootApi)
+			add("${project.path}: shared root API must not declare dependsOnApis")
+		if (source.kind != ArchitectureKind.API && !ownsApi(project))
+			add("${project.path}: dependsOnApis must be declared on an API or its owning project")
+
+		for (path in declared.sorted()) {
+			val target = descriptors[path]
+			when {
+				target == null -> add("${project.path}: dependsOnApis targets unknown API project '$path'; use an absolute project path")
+				target.kind != ArchitectureKind.API -> add("${project.path}: dependsOnApis target $path must have API kind")
+				target.rootApi -> add("${project.path}: dependsOnApis must not include the shared root API $path; it is already allowed")
+				target.family == source.family -> add("${project.path}: dependsOnApis must not include its own API family: $path")
+				isAncestorContract(project, path) -> add("${project.path}: dependsOnApis target $path belongs to an ancestor; declare it in sharedApis")
+			}
+		}
+	}
+
+	private fun familyDependencyCycles(): List<String> {
+		val edges = descriptors.values
+			.flatMap { source -> source.dependsOnApis.mapNotNull { path -> descriptors[path]?.let { source.family to it.family } } }
+			.filter { (source, target) -> source != target }
+			.groupBy({ it.first }, { it.second })
+		val visited = mutableSetOf<String>()
+		val active = mutableListOf<String>()
+		val violations = mutableListOf<String>()
+		fun visit(family: String) {
+			val start = active.indexOf(family)
+			if (start >= 0) {
+				violations.add("dependsOnApis must not form a cycle: ${(active.drop(start) + family).joinToString(" -> ")}")
+				return
+			}
+			if (!visited.add(family)) return
+			active.add(family)
+			edges[family].orEmpty().distinct().sorted().forEach(::visit)
+			active.removeAt(active.lastIndex)
+		}
+		edges.keys.sorted().forEach(::visit)
+
+		return violations
 	}
 
 	private fun sharedApiViolations(project: Project): List<String> = buildList {

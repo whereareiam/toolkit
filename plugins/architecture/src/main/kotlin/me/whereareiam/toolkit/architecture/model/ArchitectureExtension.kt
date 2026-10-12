@@ -31,6 +31,15 @@ abstract class ArchitectureExtension {
 	 */
 	var sharedApis: Set<String> = emptySet()
 
+	/**
+	 * Allows dependencies on the APIs of other families this family builds on, such as a feature that uses another
+	 * feature's contract. Declare absolute project paths on an API or its owning project; an owner's declaration also
+	 * applies to its own API children and implementations, but not to nested API owners. Contracts of ancestors belong
+	 * in [sharedApis]. Every API exposed transitively must be allowed independently, and two families must not depend
+	 * on each other's APIs.
+	 */
+	var dependsOnApis: Set<String> = emptySet()
+
 	val api: ArchitectureKind
 		get() = ArchitectureKind.API
 	val implementation: ArchitectureKind
