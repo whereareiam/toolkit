@@ -1,0 +1,59 @@
+# Toolkit tags keep their v prefix (v0.2.0); the published version drops it.
+name-template: "Toolkit v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+# The release drafter workflow sorts the changes by their title prefix.
+change-template: "* $TITLE ([#$NUMBER]($URL))"
+change-title-escapes: "\\<*_&"
+category-template: "## $TITLE"
+no-changes-template: "* No changes"
+# The text between the markers comes from .github/release-notes.md when it names the resolved version.
+template: |
+  <!-- release-notes:start -->
+  # Toolkit $RESOLVED_VERSION - [Short subtitle]
+
+  [1-2 sentence summary of the release.]
+  <!-- release-notes:end -->
+
+  # Changelog
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$RESOLVED_TAG
+
+  # Installation
+
+  Gradle has to run on Java 21 or newer. Add `https://registry.whereareiam.me/maven/packages` to `pluginManagement` repositories and apply a plugin with version `$RESOLVED_VERSION`, for example `id("me.whereareiam.toolkit.distribution") version "$RESOLVED_VERSION"`. See the [README](https://github.com/whereareiam/toolkit#readme) for each plugin.
+
+categories:
+  - type: pre-exclude
+    when:
+      label: skip-changelog
+
+  - title: "What’s new"
+    exclusive: true
+    semver-increment: minor
+    when:
+      label: feature
+
+  - title: "Enhancements"
+    exclusive: true
+    when:
+      label: change
+
+  - title: "Fixes"
+    exclusive: true
+    when:
+      label: bug
+
+  - title: "Dependencies"
+    exclusive: true
+    when:
+      label: dependencies
+
+  - type: version-resolver
+    semver-increment: major
+    when:
+      label: major
+
+  - type: version-resolver
+    semver-increment: patch

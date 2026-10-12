@@ -1,70 +1,89 @@
-name: Release build
+name: Release
+run-name: "${{ github.event_name == 'release' && format('Release {0}', github.event.release.tag_name) || format('Republish {0}', inputs.release-tag) }}"
 
 on:
   release:
-    types: [ created ]
+    types: [published]
   workflow_dispatch:
     inputs:
       release-tag:
-        description: Release tag to rebuild and republish, for example v1.0.0-RC1
+        description: Tag of the existing release to rebuild and republish, for example v0.3.0
         required: true
         type: string
 
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.release-tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
-  prepare:
+  resolve:
+    name: Resolve release
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
-      release-tag: ${{ steps.release.outputs.release-tag }}
-      version: ${{ steps.details.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release-tag || github.ref }}
-
-      - name: Resolve release tag
+      - name: Read release
         id: release
-        uses: actions/github-script@v8
         env:
-          INPUT_RELEASE_TAG: ${{ inputs.release-tag }}
-        with:
-          script: |
-            if (context.eventName === "release") {
-              core.setOutput("release-tag", context.payload.release.tag_name);
-              return;
-            }
-
-            core.setOutput("release-tag", process.env.INPUT_RELEASE_TAG);
-
-      - name: Extract release version
-        id: details
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.release-tag }}
         run: |
-          echo "version=${{ steps.release.outputs.release-tag }}" | sed 's/^version=v/version=/' >> $GITHUB_OUTPUT
+          set -euo pipefail
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
+          if jq -e '(.body // "") | contains("[Short subtitle]") or contains("[1-2 sentence summary")' <<<"$release" >/dev/null; then
+            echo "::error::Release $TAG still has the subtitle or summary placeholder of the draft; fill in .github/release-notes.md or edit the release, then publish again."
+            exit 1
+          fi
+          echo "tag=$(jq -r '.tag_name' <<<"$release")" >> "$GITHUB_OUTPUT"
 
-  build:
-    needs: prepare
-    runs-on: ubuntu-latest
+  # The tag keeps its v prefix; the published version drops it, so v0.3.0 publishes 0.3.0.
+  verify:
+    name: Verify
+    needs: resolve
+    permissions:
+      contents: read
+      checks: write
+    uses: ./.github/workflows/reusable-verify.yml
+    with:
+      ref: ${{ needs.resolve.outputs.tag }}
+      version: ${{ needs.resolve.outputs.tag }}
+      artifacts: true
+
+  publish:
+    name: Publish
+    needs: verify
     permissions:
       contents: read
       id-token: write
+    uses: ./.github/workflows/reusable-publish.yml
+    with:
+      commit: ${{ needs.verify.outputs.commit }}
+      version: ${{ needs.verify.outputs.version }}
 
+  attach:
+    name: Attach jars to the release
+    needs: [resolve, verify, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - uses: actions/download-artifact@v6
         with:
-          ref: ${{ needs.prepare.outputs.release-tag }}
+          name: toolkit-${{ needs.verify.outputs.version }}
+          path: jars
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5
-        with:
-          java-version: '21'
-          distribution: temurin
-          check-latest: true
-
-      - name: Build and publish
-        uses: whereareiam/devops/actions/registry/maven-publish@v2
-        with:
-          visibility: public
-          command: ./gradlew --no-daemon test publish
+      - name: Upload jars
         env:
-          VERSION: ${{ needs.prepare.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mapfile -t jars < <(find jars -name '*.jar' | sort)
+          duplicates="$(printf '%s\n' "${jars[@]##*/}" | sort | uniq -d)"
+          [[ -z "$duplicates" ]] || { echo "Duplicate jar names: $duplicates" >&2; exit 1; }
+          gh release upload "$TAG" "${jars[@]}" --clobber --repo "$GITHUB_REPOSITORY"
