@@ -1,64 +1,50 @@
 name: Development build
+run-name: "Development build of ${{ github.ref_name }}"
 
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
+
+concurrency:
+  group: development-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   validate-ref:
-    if: github.event_name == 'workflow_dispatch'
+    name: Validate ref
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Reject release refs for manual development publish
+      - name: Reject release refs
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          case "${GITHUB_REF_NAME}" in
+          case "$REF_NAME" in
             release|release/*)
-              echo "Manual development publish is not allowed from ${GITHUB_REF_NAME}."
+              echo "::error::Development builds are not published from $REF_NAME."
               exit 1
               ;;
           esac
 
-  prepare:
+  verify:
+    name: Verify
     needs: validate-ref
-    if: always() && (github.event_name != 'workflow_dispatch' || needs.validate-ref.result == 'success')
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.details.outputs.version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+    permissions:
+      contents: read
+      checks: write
+    uses: ./.github/workflows/reusable-verify.yml
+    with:
+      ref: ${{ github.sha }}
 
-      - name: Extract development version
-        id: details
-        run: |
-          branch_name="${GITHUB_REF_NAME//\//-}"
-          echo "version=${branch_name}-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-
-  build:
-    needs: prepare
-    if: always() && needs.prepare.result == 'success'
-    runs-on: ubuntu-latest
+  publish:
+    name: Publish
+    needs: verify
     permissions:
       contents: read
       id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5
-        with:
-          java-version: '21'
-          distribution: temurin
-          check-latest: true
-
-      - name: Build and publish
-        uses: whereareiam/devops/actions/registry/maven-publish@v2
-        with:
-          visibility: public
-          command: ./gradlew --no-daemon test publish
-        env:
-          VERSION: ${{ needs.prepare.outputs.version }}
+    uses: ./.github/workflows/reusable-publish.yml
+    with:
+      commit: ${{ needs.verify.outputs.commit }}
+      version: ${{ needs.verify.outputs.version }}
