@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload jars
         if: inputs.artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: toolkit-${{ steps.identity.outputs.version }}
           # A Gradle build-logic jar would not be part of Toolkit.
