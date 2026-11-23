@@ -14,7 +14,8 @@ its plugin marker:
   (`assembleDistribution`).
 - `versioning`: `me.whereareiam.toolkit.versioning`, sets the project version from `VERSION`.
 - `project-discovery`: `me.whereareiam.toolkit.project-discovery`, a settings plugin that includes every directory
-  with a build script.
+  with a build script, except separate builds (a directory with its own settings script) and the directories the
+  settings script excludes through `projectDiscovery { exclude(...) }`.
 - `publish-maven`: `me.whereareiam.toolkit.publish.maven`, Maven publishing to `registry.whereareiam.me`.
 - `publish-docker`: `me.whereareiam.toolkit.publish.docker`, Docker build, login and push tasks.
 
