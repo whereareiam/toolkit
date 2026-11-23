@@ -1,44 +1,38 @@
 package me.whereareiam.toolkit.discovery
 
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.initialization.Settings
-import org.gradle.api.provider.ValueSource
-import org.gradle.api.provider.ValueSourceParameters
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
 
-/** Discovers Gradle subprojects from directories containing a build script. */
+/**
+ * Discovers Gradle subprojects from directories containing a build script.
+ *
+ * A directory that holds its own settings script is a separate build and is left out together with everything below
+ * it. Directories named in the `projectDiscovery` extension are left out as well. Projects are included once the
+ * settings script has run, so the script decides what to exclude before any project exists.
+ */
 class ToolkitProjectDiscoveryPlugin : Plugin<Settings> {
 	override fun apply(settings: Settings) {
+		val discovery = settings.extensions.create("projectDiscovery", ProjectDiscoveryExtension::class.java)
 		val root = settings.rootDir
-		settings.providers.of(ProjectPaths::class.java) {
+		val paths = settings.providers.of(ProjectPaths::class.java) {
 			parameters.rootDirectory.set(root)
-		}.get().forEach { path ->
-			settings.include(":${path.replace('/', ':')}")
+		}
+
+		settings.gradle.settingsEvaluated {
+			val excluded = discovery.excludedDirectories.get()
+			val discovered = paths.get()
+			val unknown = excluded.filterNot { directory -> discovered.any { it.isWithin(directory) } }
+			if (unknown.isNotEmpty())
+				throw GradleException(
+					"projectDiscovery excludes ${unknown.sorted().joinToString()}, which hold no discovered project"
+				)
+
+			discovered
+				.filterNot { path -> excluded.any { path.isWithin(it) } }
+				.forEach { path -> settings.include(":${path.replace('/', ':')}") }
 		}
 	}
 }
 
-/** Tracks the repository tree so configuration cache refreshes when modules change. */
-abstract class ProjectPaths : ValueSource<List<String>, ProjectPaths.Parameters> {
-	interface Parameters : ValueSourceParameters {
-		@get:InputDirectory
-		@get:PathSensitive(PathSensitivity.RELATIVE)
-		val rootDirectory: DirectoryProperty
-	}
-
-	override fun obtain(): List<String> = parameters.rootDirectory.get().asFile.walkTopDown()
-		.onEnter { directory -> !isExcluded(directory) }
-		.filter { it.name == "build.gradle.kts" }
-		.map { it.parentFile.relativeTo(parameters.rootDirectory.get().asFile).invariantSeparatorsPath }
-		.filterNot { it == "." }
-		.toList()
-		.sorted()
-
-	private fun isExcluded(directory: java.io.File): Boolean = directory.name == "build-logic"
-		|| directory.name == "build"
-		|| directory.name == ".gradle"
-		|| directory.name.startsWith('.')
-}
+private fun String.isWithin(directory: String): Boolean = this == directory || startsWith("$directory/")

@@ -122,6 +122,35 @@ are included as well. Test and test-fixture configurations are excluded unless i
 into production. Forbidden API re-exports fail at the declaring API module. The task
 does not inspect Java signatures, bytecode, or externally resolved Maven artifacts.
 
+## Project discovery
+
+Apply `me.whereareiam.toolkit.project-discovery` in `settings.gradle.kts` to include every directory below the root
+that holds a `build.gradle.kts`, as the project its path names (`libs/core` becomes `:libs:core`):
+
+```kotlin
+plugins {
+    id("me.whereareiam.toolkit.project-discovery") version "<version>"
+}
+```
+
+Discovery skips `build-logic`, `build` and hidden directories, and every directory that holds its own
+`settings.gradle.kts` or `settings.gradle` together with everything below it, because that is a separate build, such
+as a standalone example. To leave more projects out, name their directories, relative to the root, in the settings
+script; a condition decides it for one build:
+
+```kotlin
+projectDiscovery {
+    if (providers.gradleProperty("withoutIde").isPresent)
+        exclude("tools/ide")
+}
+```
+
+An excluded directory leaves out its projects and every project below it, and must hold at least one project
+discovery would include. Discovery includes the projects once the settings script has run, so the script cannot
+look up a discovered project, and a project left out never exists in the build. Do not remove included projects
+from `ProjectDescriptor.children` instead: Gradle keeps them registered and generates type-safe project accessors
+that disagree between builds with and without the removal.
+
 ## Distribution
 
 Apply `me.whereareiam.toolkit.distribution` to the project that ships release files, usually the
