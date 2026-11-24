@@ -1,15 +1,26 @@
 # AGENTS.md
 
-Toolkit is a set of Gradle plugins for modular builds: architecture verification, versioning, release
+Toolkit is a set of Gradle plugins for modular builds: architecture verification, code standards, versioning, release
 distribution, project discovery, and Maven and Docker publishing. Other whereareiam projects apply them, often
 at a development version such as `dev-e2f8ced`.
 
 ## Modules
 
-Every module under `plugins/` is one Gradle plugin, published as `me.whereareiam.toolkit:<module>` together with
-its plugin marker:
+Every folder under `plugins/` is one Gradle plugin, published as `me.whereareiam.toolkit:<folder>` together with
+its plugin marker; a plugin made of several modules keeps them below its folder:
 
-- `architecture`: `me.whereareiam.toolkit.architecture`, verifies API family boundaries (`verifyArchitecture`).
+- `architecture`: `me.whereareiam.toolkit.architecture`, verifies API family boundaries (`verifyArchitecture`) and
+  classifies each project's kind (`ArchitectureKinds`), which other plugins ask instead of guessing from names.
+- `shipshape`: `me.whereareiam.toolkit.shipshape`, holds a build's Java and build files to the general rules of the
+  standard (`verifyShape`, `verifySource`, `verifyBuild`) and lets other plugins register their own rules and
+  exemption kinds. Rules are project-neutral: a module's role comes from the architecture kind, the build's own
+  packages from `packageRoots`, never from a project's names. A rule is known by its id alone, its name in lower case
+  with hyphens. The plugin is a family: `shipshape-api` holds what a rule is and reads and what other plugins build on,
+  `shipshape-common` the engine (parsing, tasks, registry) and in its test fixtures the `LayoutFixture` rule tests
+  use, `shipshape-rule/rule-<subject>` one subject's rules each, registered by its `<Subject>Rules` object through
+  the same `shipshape` block other plugins use, and the plugin's own `src` only wires them. A rule depends on
+  `shipshape-api` alone. A module inside a plugin publishes as its parent's artifact and its name without the
+  parent's role word (`shipshape-rule-flow`); the root build derives it.
 - `distribution`: `me.whereareiam.toolkit.distribution`, collects release files under their final names
   (`assembleDistribution`).
 - `versioning`: `me.whereareiam.toolkit.versioning`, sets the project version from `VERSION`.
@@ -53,7 +64,7 @@ label. Readers are developers whose builds apply Toolkit's plugins.
 
 - Titles use `Area: Description`, with a past-tense description of what changed for a build:
   `Introduced`, `Changed`, `Fixed`, `Removed`.
-- Areas are the plugins: `Architecture`, `Distribution`, `Versioning`, `Discovery`, `Maven`, `Docker`. A change
+- Areas are the plugins: `Architecture`, `Shipshape`, `Distribution`, `Versioning`, `Discovery`, `Maven`, `Docker`. A change
   across plugins takes `Publishing` when it is about publishing, otherwise `Toolkit`. Add an area only for a new
   plugin, and add it to this list in the same pull request. Never use class or task names as an area.
 

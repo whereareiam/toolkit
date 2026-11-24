@@ -43,4 +43,9 @@ class ToolkitArchitecturePlugin : Plugin<Project> {
 			dependsOn(verification)
 		}
 	}
+
+	companion object {
+		/** The id this plugin is applied by. */
+		const val ID = "me.whereareiam.toolkit.architecture"
+	}
 }

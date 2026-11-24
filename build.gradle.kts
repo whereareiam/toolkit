@@ -1,5 +1,6 @@
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
@@ -27,6 +28,9 @@ subprojects {
 
     plugins.withId("maven-publish") {
         extensions.configure<PublishingExtension> {
+            publications.withType<MavenPublication>().matching { it.name == "pluginMaven" }.configureEach {
+                artifactId = artifactOf(project)
+            }
             repositories {
                 maven {
                     name = "whereAreIAm"
@@ -69,4 +73,18 @@ subprojects {
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
     }
+}
+
+/**
+ * The artifact of a module below `plugins/`: a plugin is published under its folder's name, and a module inside a
+ * plugin under its parent's artifact and its own name without the parent's role word, so `shipshape-rule/rule-flow`
+ * publishes as `shipshape-rule-flow` and `shipshape/shipshape-api` as `shipshape-api`.
+ */
+fun artifactOf(module: Project): String {
+    val parent = module.parent ?: return module.name
+    if (parent.path == ":plugins") return module.name
+
+    val role = parent.name.substringAfterLast('-')
+
+    return artifactOf(parent) + "-" + module.name.removePrefix("$role-")
 }

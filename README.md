@@ -1,13 +1,14 @@
 # Toolkit
 
-Gradle plugins for modular builds: they find a build's projects, check the boundaries between its modules, version
-it, collect its release files, and publish it to Maven and Docker registries. Each plugin stands on its own; a build
+Gradle plugins for modular builds: they find a build's projects, check the boundaries between its modules, hold its
+code to a standard, version it, collect its release files, and publish it to Maven and Docker registries. Each plugin stands on its own; a build
 applies only the ones it needs.
 
 | Plugin | ID | Applied in | What it does |
 | --- | --- | --- | --- |
 | [Project discovery](#project-discovery) | `me.whereareiam.toolkit.project-discovery` | `settings.gradle.kts` | Includes every directory with a build script as a project |
 | [Architecture](#architecture) | `me.whereareiam.toolkit.architecture` | the root project, and modules that override their role | Fails the build when a module depends on another family's API or implementation |
+| [Shipshape](#shipshape) | `me.whereareiam.toolkit.shipshape` | the root project | Fails the build where its sources and build scripts break the standard's general rules |
 | [Versioning](#versioning) | `me.whereareiam.toolkit.versioning` | any project | Sets the project version from the `VERSION` environment variable |
 | [Distribution](#distribution) | `me.whereareiam.toolkit.distribution` | the project that ships release files | Collects release files under their final names in one directory |
 | [Maven publishing](#maven-publishing) | `me.whereareiam.toolkit.publish.maven` | each published module | Publishes a module, its sources and Javadoc to `registry.whereareiam.me` |
@@ -186,6 +187,10 @@ architecture {
 
 A `family` set on an API owner also applies to its API children and implementations that set none.
 
+Other plugins ask for a project's kind through `ArchitectureKinds.of(project)`, which returns the `kind` its
+`architecture` block states and otherwise the inferred one, with or without the plugin applied; Shipshape takes
+module roles from it.
+
 ### Sharing an ancestor's contract
 
 Client and server APIs can both use a contract API their common ancestor owns without becoming one family:
@@ -257,6 +262,300 @@ contract belongs in `sharedApis` instead, and two families must not depend on ea
 | Task | Project | What it does |
 | --- | --- | --- |
 | `verifyArchitecture` | root | Fails with every violation; `check` depends on it |
+
+</details>
+
+<a id="shipshape"></a>
+<details>
+<summary><strong>Shipshape</strong> · <code>me.whereareiam.toolkit.shipshape</code></summary>
+
+### What it is for
+
+A standard is only kept where a build checks it. Shipshape reads a build's Java sources and build scripts and fails
+the build where they break the standard's general rules: the shape of classes and packages, imports, Lombok,
+nullability, types and tests. Other plugins can add checks of their own to the same report.
+
+### Applying it
+
+Apply `me.whereareiam.toolkit.shipshape` to the root project. It holds the Java and the build files of the root
+project and of every module below it to a set of general rules, and adds three tasks, each a part of `check`:
+
+| Task | Reads | Report |
+| --- | --- | --- |
+| `verifyShape` | The shape of the Java classes, parsed by the JDK that runs Gradle; nothing is compiled | `build/verify-shape/report.txt` |
+| `verifySource` | The Java sources as text | `build/verify-source/report.txt` |
+| `verifyBuild` | Every `build.gradle.kts`, of the root, the modules and included builds, as text | `build/verify-build/report.txt` |
+
+```kotlin
+plugins {
+    id("me.whereareiam.toolkit.shipshape")
+}
+```
+
+A task reads every file once and fails for each breach of a rule that fails, naming the rule, the place and what
+is asked instead:
+
+```text
+The rules of the source were violated:
+ - hand-written-logger session-common/src/main/java/com/example/session/DefaultSessionService.java:16 declares the logger LOGGER by hand; @Slf4j writes it
+ - fixed-sleep session-common/src/test/java/com/example/session/DefaultSessionServiceTest.java:22 waits a fixed time with Thread.sleep; wait for what the test expects, up to a deadline, or move the clock
+```
+
+The report holds the same lines and the count of each rule. A rule that warns prints its places and the build goes
+on; every built-in rule fails.
+
+### Settings
+
+```kotlin
+shipshape {
+    // The packages the build's own types lie in; by default the root project's group.
+    packageRoots.add("com.example")
+    // Annotations of wiring methods, whose parameters are collaborators: Spring's @Bean.
+    wiringAnnotations.add("Bean")
+    // Id namespaces of the build's own convention plugins; an id of one word always is one.
+    conventionPlugins.add("com.example.convention")
+    // The language level of the sources; verifyShape parses at it.
+    javaRelease = 21
+}
+```
+
+`verifyShape` parses with the JDK that runs Gradle. Without `javaRelease` it reads the sources at that JDK's
+level; with it, a JDK older than `javaRelease`, or a runtime without the compiler, makes the task say so, hold
+nothing and pass. A file with a syntax error is left to the compiler.
+
+Every task fails when `packageRoots` is empty, which it is only where neither it nor the root project's group is set.
+
+### Module roles
+
+Some rules hold in one role of module only: an API keeps its enums below `type/`. A module's role is its
+architecture kind as [`me.whereareiam.toolkit.architecture`](#architecture) classifies it: the
+`kind` its `architecture` block states, otherwise the one inferred from its name, plugins and sources (`api` or
+`-api` is an API, Gradle-plugin projects and source-free dependency bundles are assemblies, everything else is an
+implementation). Shipshape does not apply the architecture plugin; without it every module has its inferred kind,
+and only the `architecture` block needs the plugin applied to that module. Load both plugins from one build
+script classpath; a module whose `architecture` block another class loader owns fails the tasks.
+
+### Rules
+
+A rule is known by its id, its name in lower case with hyphens: a breach is printed and counted under it, and no two
+rules a build runs share one. The built-in rules are grouped by subject, each subject a module of its own
+(`me.whereareiam.toolkit:shipshape-rule-<subject>`) that registers its rules through the same `shipshape` block
+another plugin uses. Shipshape adds one rule of its own to every task, `unused-exemption`: a declared exemption
+excuses something.
+
+#### Imports: `shipshape-rule-imports`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `importable-name` | `verifySource` | A name is imported, not written in full, wherever nothing else in the file answers to the same simple name; of two names in full of one simple name neither is asked to be imported |
+| `wildcard-import` | `verifySource` | No package and no class is imported whole |
+| `static-import` | `verifySource` | A static import stands in the code of tests only |
+| `import-order` | `verifySource` | Imports stand sorted in one group, then `java.*` and `javax.*` after a blank line, then the static imports after another; a module import stands first |
+
+#### Layout of the source: `shipshape-rule-format`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `line-length` | `verifySource` | A line is at most 140 columns wide, a tab counted as four |
+| `space-indentation` | `verifySource` | Code is indented with tabs; a space only aligns behind them |
+| `blank-line` | `verifyShape` | At most six statements stand together without a blank line, and a final `return` below more than two lines has one before it |
+
+#### What Lombok writes: `shipshape-rule-lombok`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `hand-written-logger` | `verifySource` | A logger is Lombok's `@Slf4j` |
+| `empty-private-constructor` | `verifySource` | The empty private constructor of a class of static members is `@NoArgsConstructor(access = AccessLevel.PRIVATE)` |
+| `assigning-constructor` | `verifyShape` | A constructor that only assigns its parameters is Lombok's |
+| `returning-accessor` | `verifyShape` | An accessor that only returns its field is Lombok's `@Getter` |
+| `accessors-annotation` | `verifySource` | No file carries `@Accessors` |
+| `builder-place` | `verifyShape` | `@Builder` stands on a class below `model/` or `config/`, on a member type, or in tests |
+
+#### Models and records: `shipshape-rule-models`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `immutable-model` | `verifyShape` | A class below `model/` has final fields, no setter, no `@Data` and no `@Setter` |
+| `collection-copy` | `verifyShape` | A class below `model/` copies the `List`, `Set` or `Map` it is handed, or lets the builder collect it (`@Singular`) |
+| `top-level-record` | `verifyShape` | No record is a top-level type |
+| `nested-record` | `verifyShape` | A member record is private, or a part of at most three components of its model |
+
+#### Typed values: `shipshape-rule-types`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `enum-word` | `verifyShape` | Outside `type/` nothing makes an enum's word from `name()`, finds a constant by an upper-cased text or keeps a `…_PREFIX` |
+| `string-choice` | `verifyShape` | Main code chooses by no text: no `switch` on a string and no `equals("…")`, but in an enum and in a `…Mapper` of an implementation |
+| `object-type` | `verifyShape` | Main code declares no `Object` field, parameter or result; overrides are not read |
+| `string-state` | `verifyShape` | In an API and an implementation no `String` field or parameter is named a state, kind, type, status, mode, role, level or category; a `…Mapper` of an implementation is not read |
+
+#### Use of the language: `shipshape-rule-language`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `reflection` | `verifySource` | Main code calls no `Class.forName`, `Proxy.newProxyInstance`, `MethodHandles` lookup, any `getDeclared…`, `getConstructor(s)`, `getMethod`/`getField` with a name, or `setAccessible`; taking a `Method` a library hands over is no reflection |
+| `stated-nullability` | `verifyShape` | A public or protected method or constructor, and every method of an interface, states `@NotNull` or `@Nullable` on each reference, as does a field of a model and one Lombok writes a signature from; overrides, wiring methods and assemblies are not read |
+| `vague-name` | `verifySource` | No type of main code is named `…Util`, `…Utils`, `…Impl` or `…Helper` |
+| `broad-catch` | `verifySource` | `Exception`, `RuntimeException` and `Throwable` are caught only in a class declared with `catchesEverything` |
+
+#### Packages: `shipshape-rule-packages`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `package-size` | `verifySource` | A package holds at most seven files directly |
+| `role-folder` | `verifyShape` | In an API an enum lies below `type/` and a class named `…Options` below `config/`; in every module an exception lies below `exception/` |
+| `lone-package` | `verifySource` | No package is made for one file, but `config`, `exception`, `model`, `type`, a module's own package (the one all its main packages lie in) and a package that groups others |
+| `util-package` | `verifyShape` | A package named `util` holds classes of static operations only, and no assembly has one |
+
+#### Size: `shipshape-rule-size`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `class-size` | `verifyShape` | A top-level type of main code is at most 250 lines |
+| `method-size` | `verifyShape` | A method's body is at most 40 lines |
+| `collaborators` | `verifyShape` | A class outside `model/` and `config/` holds at most eight collaborators, and a wiring method takes at most eight |
+| `parameters` | `verifyShape` | A method or constructor takes at most five parameters; overrides and wiring methods are not read |
+
+#### Control flow: `shipshape-rule-flow`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `cognitive-complexity` | `verifyShape` | A method's cognitive complexity, as SonarSource counts it, is at most 15 |
+| `else-if` | `verifyShape` | Main code writes no `else if` |
+| `ladder` | `verifyShape` | No three `if`s in a row without `else` test or do the same thing |
+
+#### Tests: `shipshape-rule-tests`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `test-name` | `verifySource` | A test is named `<Class>Test` or `<Class>IntegrationTest` after a class of its package and module, and the second name goes with `@Tag("integration")` |
+| `module-test` | `verifySource` | A module whose classes do something holds a test |
+| `test-clock` | `verifySource` | The code of tests declares no class extending `Clock`; a library of test fixtures holds the one clock |
+| `fixed-sleep` | `verifySource` | The code of tests never calls `Thread.sleep` |
+| `mocked-own-type` | `verifySource` | Mockito stands in for a foreign type only: none below `packageRoots` or of the test's package |
+
+#### Documentation: `shipshape-rule-documentation`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `type-javadoc` | `verifySource` | A top-level type of main code has a Javadoc |
+| `snippet-tag` | `verifySource` | A Javadoc writes an example in `<pre>{@code …}</pre>`, never `{@snippet …}` |
+
+#### Build files: `shipshape-rule-buildfile`
+
+| Rule | Task | What it asks |
+| --- | --- | --- |
+| `dependency-order` | `verifyBuild` | The roles of a `dependencies` block stand as `api`, `implementation`, `compileOnly`, `embedded`, `runtimeOnly`, `annotationProcessor`, of main code, then test fixtures, then tests; in a role projects stand before catalog aliases, each sorted |
+| `role-separation` | `verifyBuild` | An empty line stands between two roles of a `dependencies` block |
+| `plugin-order` | `verifyBuild` | Plugins stand as built-ins, external ids, then conventions, each kind by the length of the name and then by the alphabet |
+
+### Exemptions
+
+A rule may name kinds of place a build can excuse from it. A declaration names one place and its reason, never a
+whole rule, in the root build file; one that excuses nothing fails the build (`unused-exemption`). The built-in kind
+is `catchesEverything` of `LanguageRules`, a class by its full name that is a boundary and catches whatever is
+thrown (`broad-catch`):
+
+```kotlin
+import me.whereareiam.toolkit.shipshape.rule.language.LanguageRules
+
+shipshape {
+    exempt(LanguageRules.CATCHES_EVERYTHING, "com.example.delivery.DeliveryWorker", "A delivery that fails must not end the worker")
+}
+```
+
+### Modules
+
+| Module | Artifact | Holds |
+| --- | --- | --- |
+| `shipshape-api` | `me.whereareiam.toolkit:shipshape-api` | What a rule is and reads, the `shipshape` block, exemptions, the report and the measures: what another plugin builds on |
+| `shipshape-common` | `me.whereareiam.toolkit:shipshape-common` | The engine: parsing the sources, the tasks, the registry of rules and exemptions; its test fixtures hold `LayoutFixture`, which lays out a build for a rule's tests |
+| `shipshape-rule/rule-<subject>` | `me.whereareiam.toolkit:shipshape-rule-<subject>` | One subject's rules and the object that registers them, such as `ImportRules` |
+| `shipshape` | `me.whereareiam.toolkit:shipshape` | The plugin, which wires the engine and registers every subject |
+
+A plugin with rules of its own depends on `shipshape-api` alone; applying `me.whereareiam.toolkit.shipshape` brings
+the rest.
+
+### Registering rules
+
+Another plugin adds its own rules and exemption kinds through the `shipshape` block (`ShipshapeExtension`). Rules
+implement `ShapeRule` (reads one `ParsedSource`), `SourceRule` (reads all `JavaSources`) or `BuildRule` (reads one
+`BuildFile`), all in `me.whereareiam.toolkit.shipshape.api`, each with an `id`, an `Enforcement` (`FAILS` or
+`WARNS`) and the `ExemptionKind`s it reads. `RuleContext` tells a rule each module's role, the package roots and the
+wiring annotations.
+
+```kotlin
+import me.whereareiam.toolkit.shipshape.api.RuleContext
+import me.whereareiam.toolkit.shipshape.api.ShipshapeExtension
+import me.whereareiam.toolkit.shipshape.api.SourceRule
+import me.whereareiam.toolkit.shipshape.api.exemption.ExemptionKind
+import me.whereareiam.toolkit.shipshape.api.exemption.ExemptionPlace
+import me.whereareiam.toolkit.shipshape.api.java.JavaSources
+import me.whereareiam.toolkit.shipshape.api.report.Breach
+import me.whereareiam.toolkit.shipshape.api.type.Enforcement
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+
+val OWNS_DIGEST = ExemptionKind("ownsDigest")
+
+class DigestOwnerRule : SourceRule {
+    override val id = "digest-owner"
+    override val enforcement = Enforcement.FAILS
+    override val exemptions = setOf(OWNS_DIGEST)
+
+    override fun check(sources: JavaSources, context: RuleContext): List<Breach> = sources.all.filter { it.main }.flatMap { source ->
+        source.find(Regex("""MessageDigest\s*\.\s*getInstance""")).map {
+            Breach(
+                source.path, it.line, "computes a digest; declare its owner: ${OWNS_DIGEST.declaration(source.qualifiedName)}",
+                ExemptionPlace(OWNS_DIGEST, source.qualifiedName),
+            )
+        }
+    }
+}
+
+class DigestRulesPlugin : Plugin<Project> {
+    override fun apply(project: Project) {
+        project.pluginManager.apply("me.whereareiam.toolkit.shipshape")
+        project.extensions.configure(ShipshapeExtension::class.java) {
+            exemptionKind(OWNS_DIGEST)
+            source(DigestOwnerRule())
+        }
+    }
+}
+```
+
+The build then declares a place of the kind:
+
+```kotlin
+shipshape {
+    exempt(OWNS_DIGEST, "com.example.account.VerificationCode", "The SHA-256 a confirmation code is kept as")
+}
+```
+
+A rule's id is written in lower case with hyphens between its words; it is not called `name`, so that an enum can
+be a set of rules. A second rule of an id shipshape already has is refused, as is a second kind of one method, a declaration of a kind nobody registered, a kind no rule reads,
+and a kind the rules of two tasks read. A `SourceRule` that reads a file beside the Java sources names it in
+`reads`, so `verifySource` runs again when it changes. Tasks keep their rules in the configuration cache, so a rule
+holds plain values and no `Project`.
+
+A plugin whose own block hands declarations on passes the block's name, so a declaration that excuses nothing is
+named where it was written: `exempt(OWNS_DIGEST, type, reason, block = "exemptions")`.
+
+### Building a check of your own
+
+A plugin's own task holds its findings the way shipshape's tasks do, with the same public parts of
+`shipshape-api`: `ExemptionDeclarations` (`api.exemption`) keeps what a block declares, refusing a blank place or
+reason and a place declared twice; `DeclaredExemptions` takes out of the found breaches what the declarations excuse
+and makes an `unused-exemption` breach of each that excuses nothing; and `BreachReport` (`api.report`) writes the
+report, prints what warns and fails for the rest. Its rules implement `Rule` with an id of their own.
+
+```kotlin
+val findings = DeclaredExemptions(declarations.of(kinds), "session-common/build.gradle.kts").excuse(found, kinds)
+BreachReport(findings).conclude(name, report.get().asFile, logger, "The rules of the layout were violated")
+```
+
+`LineWidth` (`api.measure`) measures a line as `line-length` does, for files shipshape does not read, and
+`ImportOrder` (`api.measure`) puts a file's imports in the order `import-order` asks, for a build that writes Java.
 
 </details>
 

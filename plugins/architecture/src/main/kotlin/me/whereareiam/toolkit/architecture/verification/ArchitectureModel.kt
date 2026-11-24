@@ -1,18 +1,17 @@
 package me.whereareiam.toolkit.architecture.verification
 
+import me.whereareiam.toolkit.architecture.ArchitectureKinds
 import me.whereareiam.toolkit.architecture.model.ArchitectureDescriptor
 import me.whereareiam.toolkit.architecture.model.ArchitectureExtension
 import me.whereareiam.toolkit.architecture.type.ArchitectureKind
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ProjectDependency
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
 
 /** Infers functional API owners without treating organizational ancestors as one family. */
 internal class ArchitectureModel(private val root: Project) {
 	private val projects = root.allprojects.sortedBy(Project::getPath)
 	private val extensions = projects.associateWith { it.extensions.findByType(ArchitectureExtension::class.java) }
-	private val kinds = projects.associateWith { extensions[it]?.kind ?: inferKind(it) }
+	private val kinds = projects.associateWith(ArchitectureKinds::of)
 	private val shared = projects.associateWith { project ->
 		extensions[project]?.rootApi ?: (kinds[project] == ArchitectureKind.API
 				&& project.parent == root
@@ -188,24 +187,4 @@ internal class ArchitectureModel(private val root: Project) {
 
 	private fun ownsApi(project: Project): Boolean =
 		project.childProjects.values.any { kinds[it] == ArchitectureKind.API && shared[it] != true }
-
-	private fun isSourceFree(project: Project): Boolean {
-		val conventionalRoot = project.file("src/main").toPath().toAbsolutePath().normalize()
-		if (conventionalRoot.toFile().exists()) return false
-		val main = project.extensions.findByType(SourceSetContainer::class.java)
-				?.findByName(SourceSet.MAIN_SOURCE_SET_NAME) ?: return !project.file("src").exists()
-		if (main.allSource.buildDependencies.getDependencies(null).isNotEmpty()) return false
-
-		return main.allSource.srcDirs.all { it.toPath().toAbsolutePath().normalize().startsWith(conventionalRoot) }
-	}
-
-	private fun inferKind(project: Project): ArchitectureKind {
-		if (project.name == "api" || project.name.endsWith("-api")) return ArchitectureKind.API
-		if (project.pluginManager.hasPlugin("java-gradle-plugin")) return ArchitectureKind.ASSEMBLY
-		if (isSourceFree(project) && ProductionConfigurations.of(project)
-				.any { it.dependencies.any { dependency -> dependency is ProjectDependency } })
-			return ArchitectureKind.ASSEMBLY
-
-		return ArchitectureKind.IMPLEMENTATION
-	}
 }
