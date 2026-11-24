@@ -77,6 +77,21 @@ class CatalogCoordinateRuleTest {
 		)
 	}
 
+	@Test
+	fun `a plugin's request resolved to its module at the version it asks for passes`() {
+		val file = BuildFile("settings.gradle.kts", """
+			pluginManagement {
+				resolutionStrategy {
+					eachPlugin {
+						if (requested.id.id == "com.example.livery") useModule("com.example:livery-gradle:${'$'}{requested.version}")
+					}
+				}
+			}
+		""".trimIndent())
+
+		assertThat(LayoutFixture.breaches(rule, file)).isEmpty()
+	}
+
 	private companion object {
 		const val ID = "catalog-coordinate"
 		const val ASKED = "name the library from the version catalog, gradle/libs.versions.toml, so that every version has one place"

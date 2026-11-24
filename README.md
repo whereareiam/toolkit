@@ -460,7 +460,7 @@ excuses something. Each table below is one category and its task, `verify<Catego
 | `dependency-order` | build files | The roles of a `dependencies` block stand as `api`, `implementation`, `compileOnly`, `embedded`, `runtimeOnly`, `annotationProcessor`, of main code, then test fixtures, then tests; in a role projects stand before catalog aliases, each sorted |
 | `role-separation` | build files | An empty line stands between two roles of a `dependencies` block |
 | `plugin-order` | build files | Plugins stand as built-ins, external ids, then conventions, each kind by the length of the name and then by the alphabet |
-| `catalog-coordinate` | build and settings files | No coordinates with a version are written, as `"group:name:1.0"`, `"group:name:$version"` or by `group`, `name` and `version`: libraries are named from the version catalog, `gradle/libs.versions.toml`; comments are not read |
+| `catalog-coordinate` | build and settings files | No coordinates with a version are written, as `"group:name:1.0"`, `"group:name:$version"` or by `group`, `name` and `version`: libraries are named from the version catalog, `gradle/libs.versions.toml`; comments are not read, nor a plugin's module at the version its request asks for (`${requested.version}`) |
 
 ### Exemptions
 
