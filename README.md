@@ -426,7 +426,7 @@ excuses something. Each table below is one category and its task, `verify<Catego
 | `class-size` | shape | A top-level type of main code is at most 250 lines |
 | `method-size` | shape | A method's body is at most 40 lines |
 | `collaborators` | shape | A class outside `model/` and `config/` holds at most eight collaborators, and a wiring method takes at most eight |
-| `parameters` | shape | A method or constructor takes at most five parameters; overrides and wiring methods are not read |
+| `parameters` | shape | A method or constructor takes at most five parameters; overrides, wiring methods and Mixin or MixinExtras injector handlers (`@Inject`, `@WrapOperation` and the like, read by full name) are not read |
 
 #### Control flow: `verifyFlow`, `shipshape-rule-flow`
 

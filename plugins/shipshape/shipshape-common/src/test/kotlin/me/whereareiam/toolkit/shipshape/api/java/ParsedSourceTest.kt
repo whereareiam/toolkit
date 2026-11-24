@@ -100,6 +100,41 @@ class ParsedSourceTest {
 	}
 
 	@Test
+	fun `an annotation is read by its full name, written in full or imported by name or with its package`() {
+		val fixture = LayoutFixture.service(directory).java("session-common", "main", "com.example.session.Sessions", """
+			import jakarta.inject.Inject;
+			import org.spongepowered.asm.mixin.injection.*;
+
+			public class Sessions {
+				@Inject
+				void injected() {
+				}
+
+				@Redirect
+				void redirected() {
+				}
+
+				@com.llamalad7.mixinextras.injector.ModifyReceiver
+				void received() {
+				}
+
+				@Unknown
+				void unknown() {
+				}
+			}
+		""".trimIndent())
+		val sessions = JdkParser(null).parse(fixture.repository().all).single()
+		val wanted = setOf(
+			"org.spongepowered.asm.mixin.injection.Inject",
+			"org.spongepowered.asm.mixin.injection.Redirect",
+			"com.llamalad7.mixinextras.injector.ModifyReceiver",
+		)
+
+		assertThat(sessions.methods.map { (_, method) -> "${method.name} ${sessions.annotatedAs(method.modifiers, wanted)}" })
+			.containsExactly("injected false", "redirected true", "received true", "unknown false")
+	}
+
+	@Test
 	fun `a constructor is told from a method`() {
 		assertThat(members<MethodTree>().map(ParsedSource::isConstructor)).containsExactly(true, false, false)
 	}
