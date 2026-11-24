@@ -49,6 +49,10 @@ class ParsedSource(
 	/** The line [tree] ends on, counted from 1: the line of its last character. */
 	fun endLineOf(tree: Tree): Int = unit.lineMap.getLineNumber(positions.getEndPosition(unit, tree) - 1).toInt()
 
+	/** The text [tree] is written as, from its first character to its last, comments and line breaks included. */
+	fun writtenOf(tree: Tree): String =
+		source.written.substring(positions.getStartPosition(unit, tree).toInt(), positions.getEndPosition(unit, tree).toInt())
+
 	/** How many lines [tree] spans, the first and the last counted. */
 	fun linesOf(tree: Tree): Int = endLineOf(tree) - lineOf(tree) + 1
 

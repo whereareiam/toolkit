@@ -11,15 +11,16 @@ import com.sun.source.util.TreeScanner
 import me.whereareiam.toolkit.shipshape.api.RuleContext
 import me.whereareiam.toolkit.shipshape.api.ShapeRule
 import me.whereareiam.toolkit.shipshape.api.java.ParsedSource
+import me.whereareiam.toolkit.shipshape.api.java.SourceText
 import me.whereareiam.toolkit.shipshape.api.measure.LineWidth
 import me.whereareiam.toolkit.shipshape.api.report.Breach
 import me.whereareiam.toolkit.shipshape.api.type.Enforcement
 
 /**
- * A guard stands on one line: an `if` without `else` that only leaves (`return`, `throw`, `continue` or `break`) is
- * written `if (closed) return;`, without braces, wherever that line is at most [LineWidth.LIMIT] columns wide. One
- * written over several lines, braced or not, is read here when its condition stands on the `if`'s line and its
- * statement on one line of its own; a guard with a comment beside its statement, or one too wide for one line, stays.
+ * A guard, an `if` without `else` that only leaves (`return`, `throw`, `continue` or `break`), has one form. Where it
+ * fits in [LineWidth.LIMIT] columns it stands on one line without braces, `if (closed) return;`, however it is wrapped
+ * now. Where it does not, it stands without braces, its statement on the lines below. The one line is read from the
+ * guard as written, its lines joined, so the breach shows it. A guard with a comment inside it stays as it is.
  */
 internal class OneLineGuardRule : ShapeRule {
 	override val id = "one-line-guard"
@@ -31,7 +32,7 @@ internal class OneLineGuardRule : ShapeRule {
 		val found = mutableListOf<Breach>()
 		object : TreeScanner<Unit?, Unit?>() {
 			override fun visitIf(node: IfTree, unused: Unit?): Unit? {
-				joined(parsed, node)?.let { found += Breach(parsed.source.path, parsed.lineOf(node), SPREAD) }
+				asked(parsed, node)?.let { found += Breach(parsed.source.path, parsed.lineOf(node), it) }
 
 				return super.visitIf(node, unused)
 			}
@@ -40,31 +41,46 @@ internal class OneLineGuardRule : ShapeRule {
 		return found.sortedBy(Breach::line)
 	}
 
-	/** The guard [guard] written on one line, where it is a guard spread over several that fits on one; else `null`. */
-	private fun joined(parsed: ParsedSource, guard: IfTree): String? {
-		if (guard.elseStatement != null || parsed.linesOf(guard) == 1) return null
+	/** What [guard] is asked to change, or `null` where it is no guard or stands as one should. */
+	private fun asked(parsed: ParsedSource, guard: IfTree): String? {
+		val statement = left(guard) ?: return null
+		val opening = parsed.source.lines[parsed.lineOf(guard) - 1]
+		if (!opening.trimStart().startsWith("if") || commented(parsed.writtenOf(guard))) return null
 
-		val braced = guard.thenStatement as? BlockTree
-		val statement = braced?.statements?.singleOrNull() ?: guard.thenStatement
-		if (!leaves(statement) || parsed.linesOf(statement) != 1) return null
+		val braced = guard.thenStatement is BlockTree
+		val line = opening.takeWhile(Char::isWhitespace) + "if " + joined(parsed.writtenOf(guard.condition)) + " " +
+			joined(parsed.writtenOf(statement))
+		if (LineWidth.of(line) <= LineWidth.LIMIT) return "$SPREAD${line.trim()}".takeIf { braced || parsed.linesOf(guard) > 1 }
 
-		val first = parsed.lineOf(guard)
-		val last = parsed.endLineOf(guard)
-		val opening = parsed.source.lines[first - 1].trimEnd()
-		val written = parsed.source.lines[parsed.lineOf(statement) - 1].trim()
-		val lines = if (braced == null) 2 else 3
-		if (parsed.lineOf(statement) != first + 1 || last - first + 1 != lines || written.contains("//")) return null
-		if (braced != null && (!opening.endsWith("{") || parsed.source.lines[last - 1].trim() != "}")) return null
-
-		val line = opening.removeSuffix("{").trimEnd() + " " + written
-
-		return line.takeIf { LineWidth.of(it) <= LineWidth.LIMIT }
+		return BRACED.takeIf { braced }
 	}
 
-	private fun leaves(statement: StatementTree): Boolean =
-		statement is ReturnTree || statement is ThrowTree || statement is ContinueTree || statement is BreakTree
+	/** The statement [guard] leaves by, where it is a guard: an `if` without `else` that does nothing else. */
+	private fun left(guard: IfTree): StatementTree? {
+		if (guard.elseStatement != null) return null
+
+		val then = guard.thenStatement
+		val statement = if (then is BlockTree) then.statements.singleOrNull() else then
+
+		return statement?.takeIf { it is ReturnTree || it is ThrowTree || it is ContinueTree || it is BreakTree }
+	}
+
+	/** Says whether [written] holds a comment, which a guard joined onto one line would lose or swallow. */
+	private fun commented(written: String): Boolean =
+		written.contains("\"\"\"") || SourceText.strip(written, literals = true) != written
+
+	/**
+	 * [written] on one line: each line trimmed and joined by a space, but for none after an opening bracket or
+	 * before a closing one or a dot.
+	 */
+	private fun joined(written: String): String = written.lines().map(String::trim).filter(String::isNotEmpty)
+		.reduce { line, next -> if (line.last() in OPENING || next.first() in CLOSING) line + next else "$line $next" }
 
 	internal companion object {
-		const val SPREAD = "spreads a guard of one statement over several lines; it fits on one, as if (closed) return;"
+		const val SPREAD = "writes a guard over several lines or in braces, and it fits on one; write it as "
+		const val BRACED = "braces a guard too wide for one line; it stands without braces, its statement on the lines below"
+
+		private val OPENING = setOf('(', '[')
+		private val CLOSING = setOf(')', ']', '.')
 	}
 }
