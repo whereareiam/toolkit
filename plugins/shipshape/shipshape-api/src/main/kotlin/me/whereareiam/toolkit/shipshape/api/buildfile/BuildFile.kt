@@ -4,7 +4,7 @@ import me.whereareiam.toolkit.shipshape.api.java.SourceText
 import java.io.File
 
 /**
- * One `build.gradle.kts` as the rules of `verifyBuild` read it: what its block `plugins` applies and what its
+ * One `build.gradle.kts` as the rules of build files read it: what its block `plugins` applies and what its
  * blocks `dependencies` declare, each with its line. A declaration stands directly in its block, on one line
  * or over several, and what a closure or a loop inside the block writes is none.
  *

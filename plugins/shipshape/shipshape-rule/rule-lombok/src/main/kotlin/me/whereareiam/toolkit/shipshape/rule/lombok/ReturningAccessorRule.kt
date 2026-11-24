@@ -22,6 +22,7 @@ import javax.lang.model.element.Modifier
  */
 internal class ReturningAccessorRule : ShapeRule {
 	override val id = "returning-accessor"
+	override val category = LombokRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

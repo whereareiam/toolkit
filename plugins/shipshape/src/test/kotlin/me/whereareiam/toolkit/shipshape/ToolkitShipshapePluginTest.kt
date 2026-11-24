@@ -15,7 +15,7 @@ class ToolkitShipshapePluginTest {
 	lateinit var directory: Path
 
 	@Test
-	fun `check holds the three tasks, a build that keeps every rule passes them, and an unchanged build is not read twice`() {
+	fun `check holds a task of each category, a build that keeps every rule passes them, and an unchanged build is not read twice`() {
 		val build = ShipshapeBuild.service(directory)
 
 		val result = build.build("check")
@@ -26,7 +26,7 @@ class ToolkitShipshapePluginTest {
 	}
 
 	@Test
-	fun `a breach of each task fails check, named with its rule, its place and what is asked, and counted in the report`() {
+	fun `a breach of each category fails check, named with its rule, its place and what is asked, and counted in its report`() {
 		val build = ShipshapeBuild.service(directory)
 			.write("$API/SessionKind.java", KIND)
 			.write("$COMMON/Sessions.java", SESSIONS.replace("import java.util.List;", "import java.util.*;"))
@@ -35,24 +35,24 @@ class ToolkitShipshapePluginTest {
 		val result = build.fail("check", "--continue")
 
 		assertThat(result.output).contains(
-			"The rules of the shape of a class were violated:\n" +
+			"The rules of packages were violated:\n" +
 				" - role-folder $API/SessionKind.java:6 declares SessionKind outside of type/; an enum of an api lies below type/",
-			"The rules of the source were violated:\n - wildcard-import $COMMON/Sessions.java:3 imports java.util.* whole; import each " +
+			"The rules of imports were violated:\n - wildcard-import $COMMON/Sessions.java:3 imports java.util.* whole; import each " +
 				"name it uses",
-			"The rules of build files were violated:\n - plugin-order session-common/build.gradle.kts:3 applies base behind java-library;",
+			"The rules of buildfile were violated:\n - plugin-order session-common/build.gradle.kts:3 applies base behind java-library;",
 		)
-		assertThat(build.read("build/verify-source/report.txt")).endsWith("wildcard-import 1: 1 place\n")
+		assertThat(build.read("build/verify-imports/report.txt")).endsWith("wildcard-import 1: 1 place\n")
 	}
 
 	@Test
 	fun `a module's role is the kind the architecture plugin gives it, and the inferred one where the plugin is not applied`() {
 		val build = ShipshapeBuild.service(directory).write("$COMMON/SessionKind.java", KIND)
 
-		assertThat(build.build("verifyShape").task(":verifyShape")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
+		assertThat(build.build("verifyPackages").task(":verifyPackages")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
 
 		build.write("session-common/build.gradle.kts", "plugins {\n\tid(\"$ARCHITECTURE\")\n}\n\narchitecture {\n\tkind = api\n}\n")
 
-		assertThat(build.fail("verifyShape").output)
+		assertThat(build.fail("verifyPackages").output)
 			.contains(" - role-folder $COMMON/SessionKind.java:6 declares SessionKind outside of type/; an enum of an api lies below type/")
 	}
 
@@ -64,11 +64,11 @@ class ToolkitShipshapePluginTest {
 			"\texempt(LanguageRules.CATCHES_EVERYTHING, \"com.example.session.Sessions\", \"A listing must answer\")\n}\n"
 		val build = ShipshapeBuild.service(directory, excused).write("$COMMON/Sessions.java", catching)
 
-		assertThat(build.build("verifySource").task(":verifySource")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
+		assertThat(build.build("verifyLanguage").task(":verifyLanguage")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
 
 		build.write("$COMMON/Sessions.java", SESSIONS)
 
-		assertThat(build.fail("verifySource").output).contains(
+		assertThat(build.fail("verifyLanguage").output).contains(
 			" - unused-exemption build.gradle.kts declares catchesEverything(\"com.example.session.Sessions\") in shipshape, and nothing " +
 				"there needs it; remove the declaration",
 		)
@@ -89,8 +89,8 @@ class ToolkitShipshapePluginTest {
 	fun `a build that names no package root of its own is told to`() {
 		val build = ShipshapeBuild.service(directory, "plugins {\n\tid(\"me.whereareiam.toolkit.shipshape\")\n}\n")
 
-		assertThat(build.fail("verifyBuild").output)
-			.contains("verifyBuild needs the packages the build's own types lie in: set shipshape { packageRoots } or the group")
+		assertThat(build.fail("verifyBuildfile").output)
+			.contains("verifyBuildfile needs the packages the build's own types lie in: set shipshape { packageRoots } or the group")
 	}
 
 	@Test
@@ -111,16 +111,16 @@ class ToolkitShipshapePluginTest {
 			.write("$COMMON/TrustManager.java", manager("TrustManager"))
 			.write("$COMMON/SessionManager.java", manager("SessionManager"))
 
-		val refused = build.failWithBuildSrc("verifySource")
+		val refused = build.failWithBuildSrc("verifyNames")
 
 		assertThat(refused.output).contains(
 			" - manager-name $COMMON/SessionManager.java is named …Manager; name it after what it does",
 		).doesNotContain("TrustManager.java")
-		assertThat(build.read("build/verify-source/report.txt")).endsWith("manager-name 1: 1 place\n")
+		assertThat(build.read("build/verify-names/report.txt")).endsWith("manager-name 1: 1 place\n")
 
 		build.remove("$COMMON/SessionManager.java").remove("$COMMON/TrustManager.java")
 
-		assertThat(build.failWithBuildSrc("verifySource").output).contains(
+		assertThat(build.failWithBuildSrc("verifyNames").output).contains(
 			" - unused-exemption build.gradle.kts declares managesTrust(\"com.example.session.TrustManager\") in shipshape, and nothing " +
 				"there needs it; remove the declaration",
 		)
@@ -140,11 +140,14 @@ class ToolkitShipshapePluginTest {
 	private fun manager(type: String): String = "package com.example.session;\n\n/**\n * Manages.\n */\npublic interface $type {\n}\n"
 
 	private companion object {
-		val TASKS = listOf(":verifyShape", ":verifySource", ":verifyBuild")
+		val CATEGORIES = listOf(
+			"buildfile", "documentation", "flow", "format", "imports", "language", "lombok", "models", "packages", "size", "tests", "types",
+		)
+		val TASKS = CATEGORIES.map { ":verify" + it.replaceFirstChar(Char::uppercaseChar) }
 		const val ARCHITECTURE = "me.whereareiam.toolkit.architecture"
 		const val KIND = "package com.example.session;\n\n/**\n * Where a session is held.\n */\npublic enum SessionKind {\n\tWEB\n}\n"
 
-		val REPORTS = listOf("verify-shape", "verify-source", "verify-build").map { "build/$it/report.txt" }
+		val REPORTS = CATEGORIES.map { "build/verify-$it/report.txt" }
 
 		val SESSIONS = """
 			package com.example.session;
@@ -166,6 +169,7 @@ class ToolkitShipshapePluginTest {
 			"com.example.rules.ManagerRulesPlugin" to """
 				package com.example.rules;
 
+				import me.whereareiam.toolkit.shipshape.api.RuleCategory;
 				import me.whereareiam.toolkit.shipshape.api.ShipshapeExtension;
 				import me.whereareiam.toolkit.shipshape.api.exemption.ExemptionKind;
 				import org.gradle.api.Plugin;
@@ -173,6 +177,7 @@ class ToolkitShipshapePluginTest {
 
 				public class ManagerRulesPlugin implements Plugin<Project> {
 					public static final ExemptionKind MANAGES_TRUST = new ExemptionKind("managesTrust");
+					public static final RuleCategory NAMES = new RuleCategory("names", "Verifies what types are named.");
 
 					@Override
 					public void apply(Project project) {
@@ -191,6 +196,7 @@ class ToolkitShipshapePluginTest {
 				import java.util.Set;
 				import me.whereareiam.toolkit.shipshape.api.java.JavaSource;
 				import me.whereareiam.toolkit.shipshape.api.java.JavaSources;
+				import me.whereareiam.toolkit.shipshape.api.RuleCategory;
 				import me.whereareiam.toolkit.shipshape.api.SourceRule;
 				import me.whereareiam.toolkit.shipshape.api.RuleContext;
 				import me.whereareiam.toolkit.shipshape.api.report.Breach;
@@ -202,6 +208,11 @@ class ToolkitShipshapePluginTest {
 					@Override
 					public String getId() {
 						return "manager-name";
+					}
+
+					@Override
+					public RuleCategory getCategory() {
+						return ManagerRulesPlugin.NAMES;
 					}
 
 					@Override
@@ -239,9 +250,11 @@ class ToolkitShipshapePluginTest {
 
 				import java.util.List;
 				import java.util.Set;
+				import me.whereareiam.toolkit.shipshape.api.RuleCategory;
 				import me.whereareiam.toolkit.shipshape.api.ShipshapeExtension;
 				import me.whereareiam.toolkit.shipshape.api.java.JavaSources;
 				import me.whereareiam.toolkit.shipshape.api.SourceRule;
+				import me.whereareiam.toolkit.shipshape.rule.imports.ImportRules;
 				import me.whereareiam.toolkit.shipshape.api.RuleContext;
 				import me.whereareiam.toolkit.shipshape.api.report.Breach;
 				import me.whereareiam.toolkit.shipshape.api.exemption.ExemptionKind;
@@ -259,6 +272,11 @@ class ToolkitShipshapePluginTest {
 					@Override
 					public String getId() {
 						return "wildcard-import";
+					}
+
+					@Override
+					public RuleCategory getCategory() {
+						return ImportRules.CATEGORY;
 					}
 
 					@Override

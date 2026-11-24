@@ -20,6 +20,7 @@ import me.whereareiam.toolkit.shipshape.api.type.RoleFolder
  */
 internal class RoleFolderRule : ShapeRule {
 	override val id = "role-folder"
+	override val category = PackageRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

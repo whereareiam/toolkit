@@ -15,6 +15,7 @@ import me.whereareiam.toolkit.shipshape.api.type.RoleFolder
  */
 internal class LonePackageRule : SourceRule {
 	override val id = "lone-package"
+	override val category = PackageRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

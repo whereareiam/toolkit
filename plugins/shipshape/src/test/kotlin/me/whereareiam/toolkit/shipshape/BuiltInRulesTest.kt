@@ -9,13 +9,12 @@ import java.io.File
 
 class BuiltInRulesTest {
 	@Test
-	fun `shipshape holds the general rules, each under a name of its own`() {
-		val registry = registered().registry
-
-		assertThat(registry.shapeRules()).hasSize(22)
-		assertThat(registry.sourceRules()).hasSize(21)
-		assertThat(registry.buildRules()).hasSize(3)
+	fun `shipshape holds the general rules, each under an id of its own, in the category of its subject`() {
+		assertThat(rules()).hasSize(46)
 		assertThat(rules().map(Rule::id)).doesNotHaveDuplicates()
+		assertThat(rules().map { it.category.id }.distinct()).containsExactlyInAnyOrder(
+			"buildfile", "documentation", "flow", "format", "imports", "language", "lombok", "models", "packages", "size", "tests", "types",
+		)
 	}
 
 	@Test
@@ -25,7 +24,7 @@ class BuiltInRulesTest {
 		}
 	}
 
-	private fun rules(): List<Rule> = registered().registry.let { it.shapeRules() + it.sourceRules() + it.buildRules() }
+	private fun rules(): List<Rule> = registered().registry.rules()
 
 	private fun registered(): DefaultShipshapeExtension {
 		val extension = ProjectBuilder.builder().build().objects.newInstance(DefaultShipshapeExtension::class.java)

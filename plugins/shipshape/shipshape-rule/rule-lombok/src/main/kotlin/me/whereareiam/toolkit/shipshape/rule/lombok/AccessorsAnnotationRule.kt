@@ -13,6 +13,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class AccessorsAnnotationRule : SourceRule {
 	override val id = "accessors-annotation"
+	override val category = LombokRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

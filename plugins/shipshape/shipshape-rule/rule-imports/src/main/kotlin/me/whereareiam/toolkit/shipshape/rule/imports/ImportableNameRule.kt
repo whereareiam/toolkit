@@ -13,6 +13,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class ImportableNameRule : SourceRule {
 	override val id = "importable-name"
+	override val category = ImportRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

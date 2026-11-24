@@ -22,6 +22,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class AssigningConstructorRule : ShapeRule {
 	override val id = "assigning-constructor"
+	override val category = LombokRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

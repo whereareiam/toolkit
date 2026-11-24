@@ -10,6 +10,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
 /** A line is at most [LineWidth.LIMIT] columns wide, in main code and in tests, a comment as much as code. */
 internal class LineLengthRule : SourceRule {
 	override val id = "line-length"
+	override val category = FormatRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

@@ -8,8 +8,8 @@ import org.gradle.api.Project
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 
 /**
- * Holds a build's Java and build files to the general rules of the standard: `verifyShape`, `verifySource` and
- * `verifyBuild`, each a part of `check`, over the root project and every module below it.
+ * Holds a build's Java and build files to the general rules of the standard: a task for each category of
+ * rules, `verifyImports` and the others, each a part of `check`, over the root project and every module below it.
  */
 class ToolkitShipshapePlugin : Plugin<Project> {
 	override fun apply(project: Project) {

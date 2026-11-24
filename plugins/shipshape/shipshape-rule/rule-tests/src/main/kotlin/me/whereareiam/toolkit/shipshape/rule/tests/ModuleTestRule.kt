@@ -15,6 +15,7 @@ import me.whereareiam.toolkit.shipshape.api.type.RoleFolder
  */
 internal class ModuleTestRule : SourceRule {
 	override val id = "module-test"
+	override val category = TestRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

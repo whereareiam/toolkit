@@ -13,6 +13,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class SnippetTagRule : SourceRule {
 	override val id = "snippet-tag"
+	override val category = DocumentationRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

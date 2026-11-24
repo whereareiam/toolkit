@@ -13,6 +13,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class EmptyPrivateConstructorRule : SourceRule {
 	override val id = "empty-private-constructor"
+	override val category = LombokRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

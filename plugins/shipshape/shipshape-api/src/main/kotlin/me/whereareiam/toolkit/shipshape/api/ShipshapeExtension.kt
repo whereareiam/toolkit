@@ -46,35 +46,35 @@ interface ShipshapeExtension {
 	val conventionPlugins: SetProperty<String>
 
 	/**
-	 * The language level the Java sources are written in. `verifyShape` parses them at that level, and holds nothing,
-	 * with a warning, where Gradle runs on an older JDK. Without it the sources are read at the level of the JDK that
-	 * runs Gradle.
+	 * The language level the Java sources are written in. The shape of the classes is parsed at that level, and no rule
+	 * of the shape is held, with a warning, where Gradle runs on an older JDK. Without it the sources are read at the
+	 * level of the JDK that runs Gradle.
 	 */
 	val javaRelease: Property<Int>
 
 	/**
-	 * Adds a rule that reads the shape of the Java classes to `verifyShape`.
+	 * Adds a rule that reads the shape of the Java classes to the task of its category.
 	 *
 	 * @throws GradleException when a rule of the same name is registered already
 	 */
 	fun shape(rule: ShapeRule)
 
 	/**
-	 * Adds a rule that reads the Java source as text to `verifySource`.
+	 * Adds a rule that reads the Java source as text to the task of its category.
 	 *
 	 * @throws GradleException when a rule of the same name is registered already
 	 */
 	fun source(rule: SourceRule)
 
 	/**
-	 * Adds a rule that reads the build files to `verifyBuild`.
+	 * Adds a rule that reads the build files to the task of its category.
 	 *
 	 * @throws GradleException when a rule of the same name is registered already
 	 */
 	fun build(rule: BuildRule)
 
 	/**
-	 * Registers a kind of place a rule reads declarations of. Each kind is read by the rules of one task.
+	 * Registers a kind of place a rule reads declarations of. Each kind is read by the rules of one category.
 	 *
 	 * @throws GradleException when a kind of the same method is registered already
 	 */

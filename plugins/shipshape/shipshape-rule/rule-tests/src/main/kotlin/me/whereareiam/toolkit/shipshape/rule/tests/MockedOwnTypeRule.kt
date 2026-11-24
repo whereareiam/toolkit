@@ -14,6 +14,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class MockedOwnTypeRule : SourceRule {
 	override val id = "mocked-own-type"
+	override val category = TestRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

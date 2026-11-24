@@ -23,6 +23,7 @@ import javax.lang.model.type.TypeKind
  */
 internal class ImmutableModelRule : ShapeRule {
 	override val id = "immutable-model"
+	override val category = ModelRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

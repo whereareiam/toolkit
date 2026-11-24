@@ -29,6 +29,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class LadderRule : ShapeRule {
 	override val id = "ladder"
+	override val category = FlowRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

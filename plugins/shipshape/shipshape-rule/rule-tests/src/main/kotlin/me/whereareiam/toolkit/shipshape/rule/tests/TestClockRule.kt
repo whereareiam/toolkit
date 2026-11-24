@@ -12,6 +12,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class TestClockRule : SourceRule {
 	override val id = "test-clock"
+	override val category = TestRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

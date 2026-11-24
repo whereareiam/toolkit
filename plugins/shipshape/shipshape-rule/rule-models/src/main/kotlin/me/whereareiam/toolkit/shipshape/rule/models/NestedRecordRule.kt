@@ -18,6 +18,7 @@ import javax.lang.model.element.Modifier
  */
 internal class NestedRecordRule : ShapeRule {
 	override val id = "nested-record"
+	override val category = ModelRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

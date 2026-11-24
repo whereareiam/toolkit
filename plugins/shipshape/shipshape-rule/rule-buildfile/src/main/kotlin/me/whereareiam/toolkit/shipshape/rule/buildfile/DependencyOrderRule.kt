@@ -18,6 +18,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class DependencyOrderRule : BuildRule {
 	override val id = "dependency-order"
+	override val category = BuildFileRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

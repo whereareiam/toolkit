@@ -13,6 +13,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class TopLevelRecordRule : ShapeRule {
 	override val id = "top-level-record"
+	override val category = ModelRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

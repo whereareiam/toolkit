@@ -14,6 +14,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class ElseIfRule : ShapeRule {
 	override val id = "else-if"
+	override val category = FlowRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

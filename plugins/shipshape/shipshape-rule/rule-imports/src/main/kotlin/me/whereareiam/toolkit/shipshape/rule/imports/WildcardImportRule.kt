@@ -9,6 +9,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
 /** No package and no class is imported whole, in main code and in tests: an import names what it brings. */
 internal class WildcardImportRule : SourceRule {
 	override val id = "wildcard-import"
+	override val category = ImportRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

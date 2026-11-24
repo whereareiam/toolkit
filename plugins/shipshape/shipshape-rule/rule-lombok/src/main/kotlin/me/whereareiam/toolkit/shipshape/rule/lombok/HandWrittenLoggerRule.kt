@@ -10,6 +10,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
 /** Main code does not declare its logger by hand; Lombok's `@Slf4j` writes it, under one name everywhere. */
 internal class HandWrittenLoggerRule : SourceRule {
 	override val id = "hand-written-logger"
+	override val category = LombokRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

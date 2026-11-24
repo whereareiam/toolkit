@@ -14,6 +14,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class TestNameRule : SourceRule {
 	override val id = "test-name"
+	override val category = TestRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

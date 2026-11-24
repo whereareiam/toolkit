@@ -22,6 +22,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class StringChoiceRule : ShapeRule {
 	override val id = "string-choice"
+	override val category = TypeRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

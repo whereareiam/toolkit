@@ -22,6 +22,7 @@ import me.whereareiam.toolkit.shipshape.api.type.RoleFolder
  */
 internal class EnumWordRule : ShapeRule {
 	override val id = "enum-word"
+	override val category = TypeRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

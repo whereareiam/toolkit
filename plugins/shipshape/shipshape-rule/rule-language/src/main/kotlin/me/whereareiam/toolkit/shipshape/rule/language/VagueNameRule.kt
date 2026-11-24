@@ -17,6 +17,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class VagueNameRule : SourceRule {
 	override val id = "vague-name"
+	override val category = LanguageRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

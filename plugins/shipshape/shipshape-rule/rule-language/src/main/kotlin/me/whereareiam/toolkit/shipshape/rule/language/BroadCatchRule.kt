@@ -17,6 +17,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class BroadCatchRule : SourceRule {
 	override val id = "broad-catch"
+	override val category = LanguageRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

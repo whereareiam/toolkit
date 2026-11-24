@@ -12,6 +12,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class RoleSeparationRule : BuildRule {
 	override val id = "role-separation"
+	override val category = BuildFileRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 
