@@ -18,6 +18,9 @@ import javax.lang.model.type.TypeKind
  * A model is immutable. A class below `model/` declares every field of its instances final, has no
  * setter, and carries neither `@Data` nor `@Setter`; a changed value is a new model.
  *
+ * The shape of a configuration file below `model/config/` is not held: the library that reads the file sets
+ * its fields after it is made ([ModelRules.isFileShape]).
+ *
  * A class named `…Builder` nested in a model is not held: a builder collects the values before the model
  * exists, and Lombok writes it (`returning-accessor`). A field is final by Lombok where the class carries `@Value`.
  */
@@ -28,7 +31,7 @@ internal class ImmutableModelRule : ShapeRule {
 	override val enforcement = Enforcement.FAILS
 
 	override fun check(parsed: ParsedSource, context: RuleContext): List<Breach> {
-		if (!parsed.source.main || !parsed.source.isBelow(RoleFolder.MODEL)) return emptyList()
+		if (!parsed.source.main || !parsed.source.isBelow(RoleFolder.MODEL) || ModelRules.isFileShape(parsed.source)) return emptyList()
 
 		return parsed.types.filter { it.kind == Tree.Kind.CLASS && it.simpleName.isNotEmpty() && !it.simpleName.endsWith(BUILDER) }
 			.flatMap { model -> mutable(model).map { (place, does) -> breach(parsed, place, does) } }

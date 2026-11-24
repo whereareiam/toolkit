@@ -80,6 +80,20 @@ class ImmutableModelRuleTest {
 		)
 	}
 
+	@Test
+	fun `the shape of a configuration file below model config may change, a model beside it may not`() {
+		val fixture = LayoutFixture.service(directory)
+			.java("session-api", "main", "com.example.session.model.config.SessionSettings", MUTABLE.replace("Session", "SessionSettings"))
+			.java("session-api", "main", "com.example.session.model.config.limit.Limits", MUTABLE.replace("Session", "Limits"))
+			.java("session-api", "main", "com.example.session.config.model.Session", MUTABLE)
+
+		val beside = "session-api/src/main/java/com/example/session/config/model/Session.java"
+		assertThat(fixture.breaches(rule)).containsExactly(
+			"immutable-model $beside:4 declares the field userId of Session without final; $ASKED",
+			"immutable-model $beside:6 declares the setter setUserId() of Session; $ASKED",
+		)
+	}
+
 	private companion object {
 		const val MODEL = "session-api/src/main/java/com/example/session/model"
 		const val ASKED = "a model is immutable: its fields are final, and a changed value is a new model"

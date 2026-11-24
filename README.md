@@ -386,8 +386,8 @@ excuses something. Each table below is one category and its task, `verify<Catego
 
 | Rule | Reads | What it asks |
 | --- | --- | --- |
-| `immutable-model` | shape | A class below `model/` has final fields, no setter, no `@Data` and no `@Setter` |
-| `collection-copy` | shape | A class below `model/` copies the `List`, `Set` or `Map` it is handed, or lets the builder collect it (`@Singular`) |
+| `immutable-model` | shape | A class below `model/` has final fields, no setter, no `@Data` and no `@Setter`; the shape of a configuration file below `model/config/`, which the library that reads the file fills field by field, is not read |
+| `collection-copy` | shape | A class below `model/` copies the `List`, `Set` or `Map` it is handed, or lets the builder collect it (`@Singular`); a file shape below `model/config/` is not read |
 | `top-level-record` | shape | No record is a top-level type |
 | `nested-record` | shape | A member record is private, or a part of at most three components of its model |
 
