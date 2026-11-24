@@ -369,6 +369,7 @@ excuses something. Each table below is one category and its task, `verify<Catego
 | `line-length` | text | A line is at most 140 columns wide, a tab counted as four |
 | `space-indentation` | text | Code is indented with tabs; a space only aligns behind them |
 | `blank-line` | shape | At most six statements stand together without a blank line, and a final `return` below more than two lines has one before it |
+| `one-line-guard` | shape | An `if` without `else` that only returns, throws, continues or breaks stands on one line without braces, wherever that line fits |
 
 #### What Lombok writes: `verifyLombok`, `shipshape-rule-lombok`
 
