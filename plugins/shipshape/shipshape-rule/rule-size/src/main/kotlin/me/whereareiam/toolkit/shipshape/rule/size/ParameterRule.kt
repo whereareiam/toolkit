@@ -8,8 +8,11 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
 
 /**
  * A method or a constructor of main code takes at most five parameters. More are an options object or a
- * command model. A method that overrides another takes what that one takes, and is held there; a wiring method, one
- * that carries an annotation of `shipshape { wiringAnnotations }`, takes collaborators, which `collaborators` holds.
+ * command model. A method that overrides another takes what that one takes, and is held there. An injector handler of
+ * Mixin or MixinExtras, one annotated `@Inject`, `@WrapOperation` and the like, takes what its target and the injector
+ * give it, which no model of the build's own can hold; its annotation is read by its full name, so `jakarta.inject.Inject`
+ * is not one. A wiring method, one that carries an annotation of `shipshape { wiringAnnotations }`, takes
+ * collaborators, which `collaborators` holds.
  */
 internal class ParameterRule : ShapeRule {
 	override val id = "parameters"
@@ -22,7 +25,9 @@ internal class ParameterRule : ShapeRule {
 
 		val skipped = OVERRIDE + context.wiringAnnotations
 
-		return parsed.methods.filter { (_, method) -> method.parameters.size > LIMIT && !ParsedSource.annotated(method.modifiers, skipped) }
+		return parsed.methods.filter { (_, method) -> method.parameters.size > LIMIT }
+			.filterNot { (_, method) -> ParsedSource.annotated(method.modifiers, skipped) }
+			.filterNot { (_, method) -> parsed.annotatedAs(method.modifiers, INJECTORS) }
 			.map { (type, method) ->
 				val named = if (ParsedSource.isConstructor(method)) "the constructor of ${type.simpleName}" else "${method.name}()"
 
@@ -39,5 +44,25 @@ internal class ParameterRule : ShapeRule {
 
 		/** What a method that takes what another type declares carries. */
 		val OVERRIDE = setOf("Override")
+
+		/**
+		 * The injectors of Mixin and MixinExtras, by full name, whose handlers take what the injector gives them.
+		 * MixinExtras keeps `WrapWithCondition` in two packages, the first deprecated.
+		 */
+		val INJECTORS = setOf(
+			"org.spongepowered.asm.mixin.injection.Inject",
+			"org.spongepowered.asm.mixin.injection.Redirect",
+			"org.spongepowered.asm.mixin.injection.ModifyArg",
+			"org.spongepowered.asm.mixin.injection.ModifyArgs",
+			"org.spongepowered.asm.mixin.injection.ModifyVariable",
+			"org.spongepowered.asm.mixin.injection.ModifyConstant",
+			"com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation",
+			"com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod",
+			"com.llamalad7.mixinextras.injector.WrapWithCondition",
+			"com.llamalad7.mixinextras.injector.v2.WrapWithCondition",
+			"com.llamalad7.mixinextras.injector.ModifyExpressionValue",
+			"com.llamalad7.mixinextras.injector.ModifyReturnValue",
+			"com.llamalad7.mixinextras.injector.ModifyReceiver",
+		)
 	}
 }

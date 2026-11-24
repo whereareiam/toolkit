@@ -71,6 +71,24 @@ class ParsedSource(
 		return unit.lineMap.getLineNumber(named).toInt()
 	}
 
+	/**
+	 * Says whether [modifiers] carry an annotation that is one of [qualified], each a full name: one the file writes in
+	 * full, imports by its name, or imports with its whole package. Nothing else is resolved, so an annotation of the
+	 * file's own package is not one of them.
+	 */
+	fun annotatedAs(modifiers: ModifiersTree, qualified: Set<String>): Boolean =
+		modifiers.annotations.any { annotation -> fullNames(annotation.annotationType).any { it in qualified } }
+
+	/** The full names [type], a name the file writes, may stand for: itself when written in full, else what imports give it. */
+	private fun fullNames(type: Tree): List<String> {
+		val written = type.toString()
+		if ('.' in written) return listOf(written)
+
+		source.imports.firstOrNull { it.substringAfterLast('.') == written }?.let { return listOf(it) }
+
+		return source.imports.filter { it.endsWith(WHOLE_PACKAGE) }.map { it.removeSuffix("*") + written }
+	}
+
 	companion object {
 		/** The name [tree] ends in when it names something: `List` for `java.util.List`, `name` for `this.name`. */
 		fun simpleName(tree: Tree?): String? = when (tree) {
@@ -99,6 +117,9 @@ class ParsedSource(
 		fun names(annotations: List<AnnotationTree>): Set<String> = annotations.mapNotNull { simpleName(it.annotationType) }.toSet()
 
 		private const val THIS = "this"
+
+		/** What an import of a whole package ends in. */
+		private const val WHOLE_PACKAGE = ".*"
 
 		/** The name the parser gives a constructor. */
 		private const val CONSTRUCTOR = "<init>"
