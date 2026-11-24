@@ -17,6 +17,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class ObjectTypeRule : ShapeRule {
 	override val id = "object-type"
+	override val category = TypeRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

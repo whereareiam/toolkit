@@ -15,6 +15,7 @@ import me.whereareiam.toolkit.shipshape.api.type.RoleFolder
  */
 internal class BuilderPlaceRule : ShapeRule {
 	override val id = "builder-place"
+	override val category = LombokRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

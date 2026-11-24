@@ -12,10 +12,12 @@ its plugin marker; a plugin made of several modules keeps them below its folder:
 - `architecture`: `me.whereareiam.toolkit.architecture`, verifies API family boundaries (`verifyArchitecture`) and
   classifies each project's kind (`ArchitectureKinds`), which other plugins ask instead of guessing from names.
 - `shipshape`: `me.whereareiam.toolkit.shipshape`, holds a build's Java and build files to the general rules of the
-  standard (`verifyShape`, `verifySource`, `verifyBuild`) and lets other plugins register their own rules and
-  exemption kinds. Rules are project-neutral: a module's role comes from the architecture kind, the build's own
-  packages from `packageRoots`, never from a project's names. A rule is known by its id alone, its name in lower case
-  with hyphens. The plugin is a family: `shipshape-api` holds what a rule is and reads and what other plugins build on,
+  standard and lets other plugins register their own rules and exemption kinds. Rules are project-neutral: a
+  module's role comes from the architecture kind, the build's own packages from `packageRoots`, never from a
+  project's names. A rule is known by its id alone, its name in lower case with hyphens, and lies in a
+  `RuleCategory`; each category is one task (`verifyImports`), part of `check`, which runs whatever its rules read,
+  and the Java's shape is parsed once per build (`ParsedSources`). A built-in subject's object names its category
+  (`ImportRules.CATEGORY`); another plugin joins it or brings its own. The plugin is a family: `shipshape-api` holds what a rule is and reads and what other plugins build on,
   `shipshape-common` the engine (parsing, tasks, registry) and in its test fixtures the `LayoutFixture` rule tests
   use, `shipshape-rule/rule-<subject>` one subject's rules each, registered by its `<Subject>Rules` object through
   the same `shipshape` block other plugins use, and the plugin's own `src` only wires them. A rule depends on

@@ -21,6 +21,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class ReflectionRule : SourceRule {
 	override val id = "reflection"
+	override val category = LanguageRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

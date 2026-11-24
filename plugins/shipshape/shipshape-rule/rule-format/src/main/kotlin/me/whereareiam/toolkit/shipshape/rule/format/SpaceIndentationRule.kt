@@ -15,6 +15,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class SpaceIndentationRule : SourceRule {
 	override val id = "space-indentation"
+	override val category = FormatRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

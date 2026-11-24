@@ -22,6 +22,7 @@ import javax.lang.model.element.Modifier
  */
 internal class UtilPackageRule : ShapeRule {
 	override val id = "util-package"
+	override val category = PackageRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

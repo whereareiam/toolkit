@@ -19,6 +19,7 @@ import me.whereareiam.toolkit.shipshape.api.type.RoleFolder
  */
 internal class CollaboratorRule : ShapeRule {
 	override val id = "collaborators"
+	override val category = SizeRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

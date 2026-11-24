@@ -11,6 +11,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
 /** Imports stand in the order [ImportOrder] gives them. Main code and tests are read alike. */
 internal class ImportOrderRule : SourceRule {
 	override val id = "import-order"
+	override val category = ImportRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

@@ -1,5 +1,6 @@
 package me.whereareiam.toolkit.shipshape.api.exemption
 
+import me.whereareiam.toolkit.shipshape.api.RuleCategory
 import me.whereareiam.toolkit.shipshape.api.RuleContext
 import me.whereareiam.toolkit.shipshape.api.SourceRule
 import me.whereareiam.toolkit.shipshape.api.java.JavaSources
@@ -71,6 +72,7 @@ class DeclaredExemptionsTest {
 
 	private object Catching : SourceRule {
 		override val id = "broad-catch"
+		override val category = RuleCategory("language", "Verifies how the language is used.")
 		override val enforcement = Enforcement.FAILS
 		override val exemptions = setOf(BOUNDARY)
 

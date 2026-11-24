@@ -3,7 +3,7 @@ package me.whereareiam.toolkit.shipshape.api
 import me.whereareiam.toolkit.shipshape.api.buildfile.BuildFile
 import me.whereareiam.toolkit.shipshape.api.report.Breach
 
-/** A rule that is held on a build file, `build.gradle.kts`, read as text; `verifyBuild` runs it. */
+/** A rule that is held on a build file, `build.gradle.kts`, read as text; its category's task runs it. */
 interface BuildRule : Rule {
 	/**
 	 * Holds [file] against the rule.

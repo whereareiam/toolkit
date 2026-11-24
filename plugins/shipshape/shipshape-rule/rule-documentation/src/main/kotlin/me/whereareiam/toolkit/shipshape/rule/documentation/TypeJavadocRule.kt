@@ -13,6 +13,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class TypeJavadocRule : SourceRule {
 	override val id = "type-javadoc"
+	override val category = DocumentationRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

@@ -35,6 +35,7 @@ import javax.lang.model.element.Modifier
  */
 internal class CollectionCopyRule : ShapeRule {
 	override val id = "collection-copy"
+	override val category = ModelRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

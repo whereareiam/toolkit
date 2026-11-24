@@ -18,6 +18,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class BlankLineRule : ShapeRule {
 	override val id = "blank-line"
+	override val category = FormatRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

@@ -12,6 +12,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class FixedSleepRule : SourceRule {
 	override val id = "fixed-sleep"
+	override val category = TestRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

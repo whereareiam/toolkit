@@ -13,6 +13,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class ParameterRule : ShapeRule {
 	override val id = "parameters"
+	override val category = SizeRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

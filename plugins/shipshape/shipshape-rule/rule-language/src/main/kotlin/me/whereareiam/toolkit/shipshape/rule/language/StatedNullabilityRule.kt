@@ -33,6 +33,7 @@ import javax.lang.model.element.Modifier
  */
 internal class StatedNullabilityRule : ShapeRule {
 	override val id = "stated-nullability"
+	override val category = LanguageRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

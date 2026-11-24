@@ -14,6 +14,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class PackageSizeRule : SourceRule {
 	override val id = "package-size"
+	override val category = PackageRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

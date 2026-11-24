@@ -5,8 +5,8 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
 
 /**
  * What every rule shipshape runs states of itself. A rule is one of `ShapeRule`, `SourceRule` and `BuildRule`, which
- * say what it reads; it is registered once, built in or through the `shipshape` block, and never twice under one
- * [id].
+ * say what it reads, and lies in a [category], whose task runs it; it is registered once, built in or through the
+ * `shipshape` block, and never twice under one [id].
  *
  * A task keeps its rules with the configuration cache, so a rule holds plain values and no project.
  */
@@ -17,6 +17,9 @@ interface Rule {
 	 * is its constant's, can be a set of rules.
 	 */
 	val id: String
+
+	/** What the rule is about: its category's task runs it and reports it. */
+	val category: RuleCategory
 
 	/** What a breach of the rule costs the build. */
 	val enforcement: Enforcement

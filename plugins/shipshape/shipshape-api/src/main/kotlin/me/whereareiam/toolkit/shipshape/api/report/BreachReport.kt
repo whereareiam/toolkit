@@ -25,7 +25,7 @@ class BreachReport(findings: List<Finding>) {
 	/**
 	 * What a build prints of the rules that warn.
 	 *
-	 * @param task the task that found the breaches, `verifySource`
+	 * @param task the task that found the breaches, `verifyImports`
 	 * @return each breach with its place and the count of each rule, or `null` when every such rule is kept
 	 */
 	fun warning(task: String): String? {
@@ -39,7 +39,7 @@ class BreachReport(findings: List<Finding>) {
 	 * Ends a task: writes every breach to [file], prints through [logger] what the rules that warn found, and fails
 	 * for the rest.
 	 *
-	 * @param task the task that found the breaches, `verifySource`
+	 * @param task the task that found the breaches, `verifyImports`
 	 * @param broken what the failures broke, as the first words of the failure: `The rules of the source were violated`
 	 * @throws GradleException when a breach is of a rule that fails; it names every such breach
 	 */

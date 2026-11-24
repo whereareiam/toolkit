@@ -18,6 +18,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class StringStateRule : ShapeRule {
 	override val id = "string-state"
+	override val category = TypeRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

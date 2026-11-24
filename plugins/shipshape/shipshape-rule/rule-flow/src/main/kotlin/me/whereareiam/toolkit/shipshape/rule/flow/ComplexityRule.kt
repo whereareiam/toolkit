@@ -12,6 +12,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class ComplexityRule : ShapeRule {
 	override val id = "cognitive-complexity"
+	override val category = FlowRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

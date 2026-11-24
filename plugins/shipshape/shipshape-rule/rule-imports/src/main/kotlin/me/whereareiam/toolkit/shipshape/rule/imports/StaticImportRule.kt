@@ -13,6 +13,7 @@ import me.whereareiam.toolkit.shipshape.api.type.Enforcement
  */
 internal class StaticImportRule : SourceRule {
 	override val id = "static-import"
+	override val category = ImportRules.CATEGORY
 
 	override val enforcement = Enforcement.FAILS
 

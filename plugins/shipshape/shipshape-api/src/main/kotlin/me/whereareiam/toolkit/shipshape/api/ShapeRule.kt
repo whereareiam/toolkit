@@ -5,7 +5,7 @@ import me.whereareiam.toolkit.shipshape.api.report.Breach
 
 /**
  * A rule that needs the shape of a class: what a constructor's body does, what a method returns, which annotations a
- * field or a parameter carries. It reads one file at a time, as the JDK's parser read it, and `verifyShape` runs it.
+ * field or a parameter carries. It reads one file at a time, as the JDK's parser read it, and its category's task runs it.
  */
 interface ShapeRule : Rule {
 	/**
