@@ -16,6 +16,9 @@ import javax.lang.model.element.Modifier
  * An accessor of main code that only returns the field it is named after is not written by hand;
  * Lombok's `@Getter` writes it. One that carries an annotation Lombok would not copy stays as it is.
  *
+ * Lombok writes no `final` method: a `final` accessor of a class that can be extended stays, as it keeps the class's
+ * subclasses from changing what it answers. In a `final` class the word changes nothing, and Lombok writes the accessor.
+ *
  * `@Getter` writes `getName()`, or `isName()` for a truth value. An accessor that overrides a method called
  * as the field itself, `name()`, cannot be Lombok's while the type it overrides names the method so, and is
  * not named here: the method of that type is renamed first, and then this rule names the accessor.
@@ -33,6 +36,8 @@ internal class ReturningAccessorRule : ShapeRule {
 			val fields = type.members.filterIsInstance<VariableTree>().map { it.name.toString() }.toSet()
 
 			type.members.filterIsInstance<MethodTree>().mapNotNull { method ->
+				if (Modifier.FINAL in method.modifiers.flags && Modifier.FINAL !in type.modifiers.flags) return@mapNotNull null
+
 				val field = returned(method)?.takeIf { it in fields && method.name.toString() in accessors(it) } ?: return@mapNotNull null
 				if (method.name.contentEquals(field) && ParsedSource.annotated(method.modifiers, OVERRIDING)) return@mapNotNull null
 

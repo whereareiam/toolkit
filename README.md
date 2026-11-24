@@ -377,7 +377,7 @@ excuses something. Each table below is one category and its task, `verify<Catego
 | `hand-written-logger` | text | A logger is Lombok's `@Slf4j` |
 | `empty-private-constructor` | text | The empty private constructor of a class of static members is `@NoArgsConstructor(access = AccessLevel.PRIVATE)` |
 | `assigning-constructor` | shape | A constructor that only assigns its parameters is Lombok's |
-| `returning-accessor` | shape | An accessor that only returns its field is Lombok's `@Getter` |
+| `returning-accessor` | shape | An accessor that only returns its field is Lombok's `@Getter`, but a `final` one of a class that can be extended, as Lombok writes no final method |
 | `accessors-annotation` | text | No file carries `@Accessors` |
 | `builder-place` | shape | `@Builder` stands on a class below `model/` or `config/`, on a member type, or in tests |
 
