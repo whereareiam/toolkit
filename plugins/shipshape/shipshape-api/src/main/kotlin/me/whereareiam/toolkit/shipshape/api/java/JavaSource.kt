@@ -12,7 +12,8 @@ class JavaSource(
 	/** The module the file lies in. */
 	val module: JavaModule,
 ) {
-	private val written: String by lazy { file.readText() }
+	/** The file as it is written, comments and all. */
+	val written: String by lazy { file.readText() }
 
 	/** The file's path from the root project's folder, for a breach to name. */
 	val path: String = file.relativeTo(directory).invariantSeparatorsPath
