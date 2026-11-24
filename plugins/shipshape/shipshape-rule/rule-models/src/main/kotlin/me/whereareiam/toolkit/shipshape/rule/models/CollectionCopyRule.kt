@@ -27,6 +27,9 @@ import javax.lang.model.element.Modifier
  * is assigned, or collected by Lombok's builder (`@Singular`, on the field or on the parameter of the
  * constructor the builder calls), which copies as well.
  *
+ * The shape of a configuration file below `model/config/` keeps what the library that reads the file sets
+ * ([ModelRules.isFileShape]).
+ *
  * What is assigned is a copy when every value it can be is one the model alone holds: `List.copyOf`, a new
  * collection, `List.of`, what a stream collects or `toList()` gives, and `null`. A view of a collection, as
  * `Collections.unmodifiableList` gives one, is a copy when it is the view of a copy, and of the two sides of
@@ -40,7 +43,7 @@ internal class CollectionCopyRule : ShapeRule {
 	override val enforcement = Enforcement.FAILS
 
 	override fun check(parsed: ParsedSource, context: RuleContext): List<Breach> {
-		if (!parsed.source.main || !parsed.source.isBelow(RoleFolder.MODEL)) return emptyList()
+		if (!parsed.source.main || !parsed.source.isBelow(RoleFolder.MODEL) || ModelRules.isFileShape(parsed.source)) return emptyList()
 
 		return parsed.types.filter { it.kind == Tree.Kind.CLASS || it.kind == Tree.Kind.RECORD }.flatMap { type ->
 			val copied = copied(type) + collected(type)

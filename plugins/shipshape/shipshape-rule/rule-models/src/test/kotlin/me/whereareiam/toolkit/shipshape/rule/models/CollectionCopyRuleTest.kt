@@ -126,4 +126,22 @@ class CollectionCopyRuleTest {
 		const val ASKED = "copy it where it is assigned (copyOf), or let the builder collect it (@Singular)"
 		const val HOLDING = "import java.util.List;\nimport lombok.Value;\n\n@Value\npublic class %s {\n\tList<String> devices;\n}\n"
 	}
+
+	@Test
+	fun `the shape of a configuration file below model config keeps the collection the library sets`() {
+		val fixture = LayoutFixture.service(directory)
+			.java("session-api", "main", "com.example.session.model.config.SessionSettings", """
+				import java.util.List;
+
+				public class SessionSettings {
+					private List<String> origins;
+
+					public SessionSettings(List<String> origins) {
+						this.origins = origins;
+					}
+				}
+			""".trimIndent())
+
+		assertThat(fixture.breaches(rule)).isEmpty()
+	}
 }
