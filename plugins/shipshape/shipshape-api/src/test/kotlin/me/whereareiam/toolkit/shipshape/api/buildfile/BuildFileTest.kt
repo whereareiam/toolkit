@@ -1,25 +1,32 @@
 package me.whereareiam.toolkit.shipshape.api.buildfile
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 class BuildFileTest {
 	@Test
-	fun `the build files of a repository are its root's, its modules' and an included build's, and none a build left behind`(
+	fun `the build files are the build and settings scripts of the root, the modules and an included build, none a build left behind`(
 		@TempDir repository: File,
 	) {
 		val written = listOf(
 			"build.gradle.kts", "session-adapter/adapter-grpc/build.gradle.kts", "build-logic/build.gradle.kts",
-			"build/generated/build.gradle.kts", "session-api/.gradle/build.gradle.kts", "session-api/settings.gradle.kts",
+			"build/generated/build.gradle.kts", "session-api/.gradle/build.gradle.kts", "build-logic/settings.gradle.kts",
+			"settings.gradle.kts", "session-api/gradle.properties",
 		)
 		written.forEach { repository.resolve(it).apply { parentFile.mkdirs() }.writeText("plugins {\n\tbase\n}\n") }
 
 		val read = BuildFile.below(repository, emptySet())
 
-		assertThat(read.map { it.path })
-			.containsExactly("build-logic/build.gradle.kts", "build.gradle.kts", "session-adapter/adapter-grpc/build.gradle.kts")
+		assertThat(read.map { it.path }).containsExactly(
+			"build-logic/build.gradle.kts", "build-logic/settings.gradle.kts", "build.gradle.kts",
+			"session-adapter/adapter-grpc/build.gradle.kts", "settings.gradle.kts",
+		)
+		assertThat(read.map { it.script }).containsExactly(
+			BuildFile.Script.BUILD, BuildFile.Script.SETTINGS, BuildFile.Script.BUILD, BuildFile.Script.BUILD, BuildFile.Script.SETTINGS,
+		)
 		assertThat(read).allSatisfy { assertThat(it.applies("base")).isTrue() }
 	}
 
@@ -194,5 +201,25 @@ class BuildFileTest {
 		val file = BuildFile("build.gradle.kts", "tasks.test {\n\t// the port of the stack\n\tenvironment(\"PORT\", \"18432\")\n}\n")
 
 		assertThat(file.lines).containsExactly("tasks.test {", "\t", "\tenvironment(\"PORT\", \"18432\")", "}", "")
+	}
+
+	@Test
+	fun `the strings are read with their lines, and none in a comment`() {
+		val file = BuildFile("settings.gradle.kts", """
+			// "org.yaml:snakeyaml:2.2"
+			rootProject.name = "session-service" /* "a" */
+			include("session-api", "say \"hi\"")
+		""".trimIndent())
+
+		assertThat(file.strings).containsExactly(
+			IndexedValue(2, "session-service"),
+			IndexedValue(3, "session-api"),
+			IndexedValue(3, "say \\\"hi\\\""),
+		)
+	}
+
+	@Test
+	fun `a file of another name is no script of a build`() {
+		assertThatThrownBy { BuildFile("session-api/gradle.properties", "") }.hasMessageContaining("gradle.properties is no script")
 	}
 }

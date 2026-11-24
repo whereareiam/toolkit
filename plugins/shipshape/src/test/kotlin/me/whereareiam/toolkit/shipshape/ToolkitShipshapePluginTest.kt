@@ -45,6 +45,20 @@ class ToolkitShipshapePluginTest {
 	}
 
 	@Test
+	fun `the settings script is read by the build rules that read it, and a change to it is read anew`() {
+		val build = ShipshapeBuild.service(directory)
+
+		assertThat(build.build("verifyBuildfile").task(":verifyBuildfile")?.outcome).isEqualTo(TaskOutcome.SUCCESS)
+
+		build.write("settings.gradle.kts", build.read("settings.gradle.kts") + "\nval yaml = \"org.yaml:snakeyaml:2.2\"\n")
+
+		assertThat(build.fail("verifyBuildfile").output).contains(
+			"The rules of buildfile were violated:\n - catalog-coordinate settings.gradle.kts:5 writes out org.yaml:snakeyaml:2.2 " +
+				"with its version; name the library from the version catalog",
+		)
+	}
+
+	@Test
 	fun `a module's role is the kind the architecture plugin gives it, and the inferred one where the plugin is not applied`() {
 		val build = ShipshapeBuild.service(directory).write("$COMMON/SessionKind.java", KIND)
 

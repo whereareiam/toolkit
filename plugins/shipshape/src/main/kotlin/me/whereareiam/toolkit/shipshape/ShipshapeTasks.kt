@@ -70,9 +70,9 @@ internal class ShipshapeTasks(
 		return read(java + rules.filterIsInstance<SourceRule>().flatMap(SourceRule::reads))
 	}
 
-	/** Every build file of the build, where a rule reads build files. */
+	/** Every build file of the build of the scripts its build rules read. */
 	private fun buildFiles(rules: List<Rule>): FileCollection =
-		read(if (rules.any { it is BuildRule }) setOf("**/${BuildFile.NAME}") else emptySet())
+		read(rules.filterIsInstance<BuildRule>().flatMap(BuildRule::scripts).map { "**/${it.fileName}" }.toSet())
 
 	/** Every project of the build, each with its architecture kind. */
 	private fun modules(): Map<JavaModule, ArchitectureKind> = project.allprojects.sortedBy(Project::getPath).associate {

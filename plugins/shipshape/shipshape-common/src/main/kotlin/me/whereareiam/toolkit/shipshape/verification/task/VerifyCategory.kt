@@ -151,7 +151,8 @@ abstract class VerifyCategory : DefaultTask() {
 		if (rules.isEmpty()) return emptyList()
 
 		return BuildFile.below(directory.get().asFile, conventionPlugins.get()).flatMap { file ->
-			rules.flatMap { rule -> rule.check(file, context).map { rule to it } }.sortedBy { (_, breach) -> breach.line }
+			rules.filter { file.script in it.scripts }.flatMap { rule -> rule.check(file, context).map { rule to it } }
+				.sortedBy { (_, breach) -> breach.line }
 		}
 	}
 
