@@ -10,7 +10,7 @@ import java.io.File
 class BuiltInRulesTest {
 	@Test
 	fun `shipshape holds the general rules, each under an id of its own, in the category of its subject`() {
-		assertThat(rules()).hasSize(46)
+		assertThat(rules()).hasSize(47)
 		assertThat(rules().map(Rule::id)).doesNotHaveDuplicates()
 		assertThat(rules().map { it.category.id }.distinct()).containsExactlyInAnyOrder(
 			"buildfile", "documentation", "flow", "format", "imports", "language", "lombok", "models", "packages", "size", "tests", "types",
