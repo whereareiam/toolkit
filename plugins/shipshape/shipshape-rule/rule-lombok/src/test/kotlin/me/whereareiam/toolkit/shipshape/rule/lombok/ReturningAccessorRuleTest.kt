@@ -57,6 +57,39 @@ class ReturningAccessorRuleTest {
 	}
 
 	@Test
+	fun `a final accessor of a class that can be extended is written out, as Lombok writes no final method`() {
+		val fixture = LayoutFixture.service(directory).java("session-api", "main", "com.example.session.view.View", """
+			public abstract class View {
+				private final String key = "";
+
+				public final String key() {
+					return key;
+				}
+			}
+		""".trimIndent())
+
+		assertThat(fixture.breaches(rule)).isEmpty()
+	}
+
+	@Test
+	fun `a final accessor of a final class is refused, as the word changes nothing there`() {
+		val fixture = LayoutFixture.service(directory).java("session-api", "main", "com.example.session.view.Toast", """
+			public final class Toast {
+				private final long shownMillis = 0;
+
+				public final long shownMillis() {
+					return shownMillis;
+				}
+			}
+		""".trimIndent())
+
+		assertThat(fixture.breaches(rule)).containsExactly(
+			"returning-accessor session-api/src/main/java/com/example/session/view/Toast.java:6 writes shownMillis() of Toast by hand, " +
+				"and it only returns the field shownMillis; @Getter writes it",
+		)
+	}
+
+	@Test
 	fun `an accessor that only returns the field it is named after is refused in main code`() {
 		val fixture = LayoutFixture.service(directory).java("session-api", "main", "com.example.session.model.Session", """
 			public class Session {
