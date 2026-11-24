@@ -286,7 +286,7 @@ is a task of its own, part of `check`: `verifyImports` runs the rules of `import
 | --- | --- |
 | The shape of the Java classes (`ShapeRule`) | Parsed by the JDK that runs Gradle, once per build however many tasks read it; nothing is compiled |
 | The Java sources as text (`SourceRule`) | The files below each module's `src/*/java` |
-| The build files (`BuildRule`) | Every `build.gradle.kts`, of the root, the modules and included builds, as text |
+| The build files (`BuildRule`) | Every `build.gradle.kts`, of the root, the modules and included builds, as text, and every `settings.gradle.kts` where the rule names it in its `scripts` |
 
 The built-in categories are `imports`, `format`, `lombok`, `models`, `types`, `language`, `packages`, `size`,
 `flow`, `tests`, `documentation` and `buildfile`; a plugin adds its rules to one of them or brings a category of its
@@ -408,6 +408,7 @@ excuses something. Each table below is one category and its task, `verify<Catego
 | `stated-nullability` | shape | A public or protected method or constructor, and every method of an interface, states `@NotNull` or `@Nullable` on each reference, as does a field of a model and one Lombok writes a signature from; overrides, wiring methods and assemblies are not read |
 | `vague-name` | text | No type of main code is named `…Util`, `…Utils`, `…Impl` or `…Helper` |
 | `broad-catch` | text | `Exception`, `RuntimeException` and `Throwable` are caught only in a class declared with `catchesEverything` |
+| `static-state` | shape | Main code keeps no state in a static field: none that is not `final`, and no `static final` `ThreadLocal` or `InheritableThreadLocal`; a field a framework forces is declared with `forcedStatic` |
 
 #### Packages: `verifyPackages`, `shipshape-rule-packages`
 
@@ -459,19 +460,24 @@ excuses something. Each table below is one category and its task, `verify<Catego
 | `dependency-order` | build files | The roles of a `dependencies` block stand as `api`, `implementation`, `compileOnly`, `embedded`, `runtimeOnly`, `annotationProcessor`, of main code, then test fixtures, then tests; in a role projects stand before catalog aliases, each sorted |
 | `role-separation` | build files | An empty line stands between two roles of a `dependencies` block |
 | `plugin-order` | build files | Plugins stand as built-ins, external ids, then conventions, each kind by the length of the name and then by the alphabet |
+| `catalog-coordinate` | build and settings files | No coordinates with a version are written, as `"group:name:1.0"`, `"group:name:$version"` or by `group`, `name` and `version`: libraries are named from the version catalog, `gradle/libs.versions.toml`; comments are not read |
 
 ### Exemptions
 
 A rule may name kinds of place a build can excuse from it. A declaration names one place and its reason, never a
-whole rule, in the root build file; one that excuses nothing fails the build (`unused-exemption`). The built-in kind
-is `catchesEverything` of `LanguageRules`, a class by its full name that is a boundary and catches whatever is
-thrown (`broad-catch`):
+whole rule, in the root build file; one that excuses nothing fails the build (`unused-exemption`). The built-in kinds
+are those of `LanguageRules`:
+
+- `catchesEverything`, a class by its full name that is a boundary and catches whatever is thrown (`broad-catch`);
+- `forcedStatic`, a static field a framework forces, by the full name of its type and its own name, as a static door
+  a game's mixins must reach or a static holder a library requires (`static-state`).
 
 ```kotlin
 import me.whereareiam.toolkit.shipshape.rule.language.LanguageRules
 
 shipshape {
     exempt(LanguageRules.CATCHES_EVERYTHING, "com.example.delivery.DeliveryWorker", "A delivery that fails must not end the worker")
+    exempt(LanguageRules.FORCED_STATIC, "com.example.mod.ModDoor.door", "The mixins reach the mod only statically")
 }
 ```
 
