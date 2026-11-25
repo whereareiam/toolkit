@@ -1,18 +1,27 @@
 ---
-version: 0.3.0
+version: 0.4.0
 ---
 
-# Toolkit 0.3.0 - API Families
+# Toolkit 0.4.0 - Shipshape
 
-Architecture verification now checks that modules use only the APIs of their own family, of ancestors they share a
-contract with, and of other families they declare they build on. A new distribution plugin collects a project's
-release files under their final names.
+Shipshape is a new plugin that holds a build's Java sources and build scripts to the standard's general rules and
+fails `check` where they break them, one task per category of rules. Project discovery can now leave out directories
+and skips separate builds on its own.
 
 ## Highlights
 
-* `me.whereareiam.toolkit.distribution` collects a project's release files under their final names in `build/distribution` with `assembleDistribution`.
-* Architecture verification enforces API family boundaries, lets nested API owners share an ancestor's contract they declare (`sharedApis`), and lets a family build on the APIs of other families it declares (`dependsOnApis`).
+* `me.whereareiam.toolkit.shipshape` checks imports, format, Lombok, flow, size, models, packages, language and build
+  files, each category in a task of its own (`verifyImports`, `verifyFormat`, ...) that `check` runs, with exemptions
+  declared in the `shipshape` block and a rule against exemptions no longer needed.
+* Builds add rules of their own through `ShipshapeExtension.source()` in the same block.
+* Static state without an owner and library versions written in build scripts are refused; a framework's forced field
+  is declared with `forcedStatic`.
+* Mixin and MixinExtras injector handlers keep the parameters their injector gives them, and the shapes of configuration
+  files below `model/config` may stay mutable.
+* Project discovery takes `exclude(...)` for directories to leave out and skips directories that hold a separate build.
 
 ## Upgrading
 
-* `verifyArchitecture` now fails when a module depends on the API of another family. Declare an ancestor's contract in `sharedApis` and another family's API in `dependsOnApis`, or move the dependency into an assembly; see the README.
+* Nothing changes for builds that do not apply Shipshape.
+* A build that applies Shipshape for the first time should run `check` and either fix what it reports or declare an
+  exemption with its reason; see the README.
